@@ -1,4 +1,4 @@
-﻿{
+{
     "name":  "vc-pipeline-intelligence",
     "version":  "0.1.0",
     "private":  true,
@@ -8,8 +8,8 @@
                     "start":  "next start",
                     "test":  "vitest run",
                     "typecheck":  "tsc --noEmit",
-                    "discover":  "tsx --env-file=.env.local scripts/discover.ts",
-                    "seed":  "tsx --env-file=.env.local scripts/seed.ts"
+                    "discover":  "tsx --env-file=.env.local scripts/discover.mts",
+                    "seed":  "tsx --env-file=.env.local scripts/seed.mts"
                 },
     "dependencies":  {
                          "@google/genai":  "^2.28.0",

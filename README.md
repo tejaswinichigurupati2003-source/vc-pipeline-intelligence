@@ -20,7 +20,7 @@ Full design: [SPEC.md](SPEC.md). Stack: Next.js 15 (App Router, TS) on Vercel, S
 7. Open the dashboard, click **Refresh**, enter the admin token, watch the run complete. Check the "Rejected candidates" list on a VC page to sanity-check the filters.
 8. **Deploy**: push to GitHub, import in Vercel, add every variable from `.env.example` to Production, deploy. Keep Deployment Protection off for the production URL (the batch self-call and cron need it). The cron (`vercel.json`, Tue and Fri 01:00 UTC, about 06:30 IST) runs on production only.
 
-Dry-run discovery without Supabase or Gemini (needs only `LANGSEARCH_API_KEY`): `npx tsx --env-file=.env.local scripts/discover.ts Blume Dynamo`.
+Dry-run discovery without Supabase or Gemini (needs only `LANGSEARCH_API_KEY`): `npx tsx --env-file=.env.local scripts/discover.mts Blume Dynamo`.
 
 ## Tests
 
