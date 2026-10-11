@@ -12,13 +12,14 @@ interface Status {
 const KEY = "vc_admin_token";
 const getToken = () => { try { return sessionStorage.getItem(KEY) ?? ""; } catch { return ""; } };
 
-export default function RefreshControls({ stalled, runId }: { stalled: boolean; runId: string | null }) {
+export default function RefreshControls({ stalled, runId, open }: { stalled: boolean; runId: string | null; open?: boolean }) {
   const router = useRouter();
   const [msg, setMsg] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const ask = (): string | null => {
+    if (open) return "open"; // login switched off: the server ignores the token
     let t = getToken();
     if (!t) {
       t = window.prompt("Admin token") ?? "";

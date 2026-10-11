@@ -5,11 +5,12 @@ import { useState } from "react";
 const KEY = "vc_admin_token";
 
 /** Private notes + "mark wrong" controls. Notes are fetched only after the admin token is supplied. */
-export default function AdminPanel({ vcId }: { vcId: string }) {
+export default function AdminPanel({ vcId, open }: { vcId: string; open?: boolean }) {
   const [notes, setNotes] = useState<{ contact_history?: string | null; personal_notes?: string | null } | null>(null);
   const [err, setErr] = useState("");
 
   const token = () => {
+    if (open) return "open";
     let t = "";
     try { t = sessionStorage.getItem(KEY) ?? ""; } catch { /* ignore */ }
     if (!t) {

@@ -7,6 +7,13 @@ function safeEqual(a: string, b: string): boolean {
 
 export const SESSION_COOKIE = "vcpi_admin";
 
+/**
+ * Explicit opt-out of the admin login: set WORKSPACE_AUTH=off. Then the workspace and every admin API are usable by
+ * anyone who can reach the URL (reads private notes, triggers syncs, can create Gmail drafts, deletes data).
+ * Fine on localhost; think twice before leaving it off on a public URL.
+ */
+export const workspaceOpen = () => process.env.WORKSPACE_AUTH === "off";
+
 /** Cookie value: derived from ADMIN_TOKEN, so rotating the token invalidates every session. */
 export function sessionValue(): string | null {
   const t = process.env.ADMIN_TOKEN;
@@ -36,6 +43,7 @@ export function hasAdminSession(cookieValue: string | null | undefined): boolean
 
 /** Admin = valid x-admin-token header (scripts, dashboard Refresh) OR valid session cookie (workspace UI). */
 export function isAdmin(req: Request): boolean {
+  if (workspaceOpen()) return true;
   if (isAdminToken(req.headers.get("x-admin-token"))) return true;
   if (!hasAdminSession(cookieOf(req, SESSION_COOKIE))) return false;
   // Cookie auth is ambient, so require a same-origin caller for state-changing requests (CSRF defence in depth).

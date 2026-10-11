@@ -3,13 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function MarkWrong({ vcId, signalId }: { vcId: string; signalId: string }) {
+export default function MarkWrong({ vcId, signalId, open }: { vcId: string; signalId: string; open?: boolean }) {
   const router = useRouter();
   const [state, setState] = useState<"idle" | "done" | "error">("idle");
   const click = async () => {
-    let t = "";
-    try { t = sessionStorage.getItem("vc_admin_token") ?? ""; } catch { /* ignore */ }
-    if (!t) t = window.prompt("Admin token") ?? "";
+    let t = open ? "open" : ""; // login switched off: the server ignores the token
+    if (!open) {
+      try { t = sessionStorage.getItem("vc_admin_token") ?? ""; } catch { /* ignore */ }
+      if (!t) t = window.prompt("Admin token") ?? "";
+    }
     if (!t) return;
     const res = await fetch(`/api/vc/${vcId}`, {
       method: "PATCH",

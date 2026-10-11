@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import AdminPanel from "@/components/AdminPanel";
 import MarkWrong from "@/components/MarkWrong";
 import { getVcDetail } from "@/lib/db/read";
+import { workspaceOpen } from "@/lib/auth";
 import { signalDate } from "@/lib/scoring/score";
 import { fmtDate, fmtDateTime, STATUS_LABEL } from "@/lib/view/format";
 
@@ -50,7 +51,7 @@ export default async function VcPage({ params }: { params: Promise<{ id: string 
             {s.evidence_quote && <blockquote className="mt-2 border-l-4 border-slate-300 pl-3 text-sm italic text-slate-600">“{s.evidence_quote}”</blockquote>}
             <div className="mt-2 flex items-center gap-3 text-xs text-slate-500">
               <span>relevance {s.relevance_score}</span>
-              {s.verification_status === "accepted" && <MarkWrong vcId={vc.id} signalId={s.id} />}
+              {s.verification_status === "accepted" && <MarkWrong vcId={vc.id} signalId={s.id} open={workspaceOpen()} />}
               {s.verification_status === "rejected_by_user" && <span>Rejected by you</span>}
             </div>
           </li>
@@ -80,7 +81,7 @@ export default async function VcPage({ params }: { params: Promise<{ id: string 
         {!rejected.length && <li className="text-slate-500">None recorded.</li>}
       </ul>
 
-      <AdminPanel vcId={vc.id} />
+      <AdminPanel vcId={vc.id} open={workspaceOpen()} />
     </main>
   );
 }

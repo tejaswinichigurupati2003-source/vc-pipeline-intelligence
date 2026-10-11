@@ -2,6 +2,7 @@ import Link from "next/link";
 import RefreshControls from "@/components/RefreshControls";
 import { getPipeline, type PipelineRow } from "@/lib/db/read";
 import { latestRun } from "@/lib/db/store";
+import { workspaceOpen } from "@/lib/auth";
 import { db } from "@/lib/db/client";
 import { BUCKET_META, BUCKET_ORDER, bandOfScore, type Bucket } from "@/lib/view/buckets";
 import { fmtDate, fmtDateTime, STATUS_LABEL } from "@/lib/view/format";
@@ -101,7 +102,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
           <h1 className="text-2xl font-bold">This week</h1>
           <p className="text-sm text-slate-600">Which VCs are worth contacting now, and why. Evidence from the last 30 days.</p>
         </div>
-        <RefreshControls stalled={stalled} runId={run?.id ?? null} />
+        <RefreshControls stalled={stalled} runId={run?.id ?? null} open={workspaceOpen()} />
       </header>
 
       <section className="mb-6 rounded-lg border border-slate-200 bg-white p-4 text-sm">
