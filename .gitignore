@@ -8,3 +8,4 @@ next-env.d.ts
 .vercel
 dev.log
 dev.err
+build.log
