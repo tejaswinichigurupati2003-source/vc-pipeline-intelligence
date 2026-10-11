@@ -1,0 +1,11 @@
+
+> vc-pipeline-intelligence@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.5.27
+   - Local:        http://localhost:3001
+   - Network:      http://192.168.0.107:3001
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 7.1s
