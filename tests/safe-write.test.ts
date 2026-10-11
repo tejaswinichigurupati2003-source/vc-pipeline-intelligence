@@ -22,15 +22,35 @@ describe("write boundary (release-blocking)", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("vc_pipeline .insert( appears only in the CSV import route", () => {
+  it("vc_pipeline .insert( appears only in the insert-only import route and the user-writer", () => {
     const re = /\.from\(\s*['"`]vc_pipeline['"`]\s*\)[\s\S]{0,200}?\.insert\s*\(/;
     const offenders = files.filter((f) => re.test(readFileSync(f, "utf8"))).map((f) => path.relative(SRC, f).replace(/\\/g, "/"));
-    expect(offenders).toEqual(["app/api/import/route.ts"]);
+    expect(offenders.sort()).toEqual(["app/api/import/route.ts", "lib/db/user-writer.ts"]);
   });
 
   it("the RPC is called only from pipeline-writer.ts", () => {
     const callers = files.filter((f) => /apply_vc_signal_update/.test(readFileSync(f, "utf8"))).map((f) => path.basename(f));
     expect(callers).toEqual(["pipeline-writer.ts"]);
+  });
+
+  it("user-initiated import RPCs are called only from user-writer.ts, and the scanner never imports it", () => {
+    const callers = files.filter((f) => /import_fill_blanks|import_apply_resolution|user_delete_vc/.test(readFileSync(f, "utf8"))).map((f) => path.basename(f));
+    expect(callers).toEqual(["user-writer.ts"]);
+    const importers = files.filter((f) => /user-writer/.test(readFileSync(f, "utf8"))).map((f) => path.relative(SRC, f).replace(/\\/g, "/"));
+    expect(importers).toEqual(["lib/importer/service.ts"]);
+    for (const scanFile of ["lib/scan/scan-vc.ts", "lib/scan/batch.ts"]) expect(readFileSync(path.join(SRC, scanFile), "utf8")).not.toMatch(/user-writer|importer/);
+  });
+
+  it("SQL allow-lists for user RPCs never include the four signal columns", () => {
+    const sql = readFileSync(path.resolve(__dirname, "../supabase/migrations/005_user_rpcs.sql"), "utf8");
+    const body = sql.replace(/--.*$/gm, "");
+    for (const col of ["last_signal_date", "signal_summary", "follow_up_score", "recommended_action"]) expect(body).not.toContain(col);
+  });
+
+  it("the app can never send email: no send scope, endpoint or function exists", () => {
+    const all = files.map((f) => readFileSync(f, "utf8")).join("\n");
+    expect(all).not.toMatch(/gmail\.send|gmail\.modify|mail\.google\.com\/"|\/messages\/send|\/drafts\/send|users\.messages\.send/);
+    expect(all).not.toMatch(/function\s+send\w*Email|sendGmail/i);
   });
 
   it("scanner profile reads never select manual notes/history", () => {

@@ -1,0 +1,59 @@
+   ▲ Next.js 15.5.27
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 17.2s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/3) ...
+ ✓ Generating static pages (3/3)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ƒ /                                    1.11 kB         107 kB
+├ ○ /_not-found                            998 B         104 kB
+├ ƒ /api/auth/login                        190 B         103 kB
+├ ƒ /api/cron/scan                         190 B         103 kB
+├ ƒ /api/drafts                            190 B         103 kB
+├ ƒ /api/export                            190 B         103 kB
+├ ƒ /api/import                            190 B         103 kB
+├ ƒ /api/import/commit                     190 B         103 kB
+├ ƒ /api/import/conflicts                  190 B         103 kB
+├ ƒ /api/import/preview                    190 B         103 kB
+├ ƒ /api/import/revert                     190 B         103 kB
+├ ƒ /api/integrations/disconnect           190 B         103 kB
+├ ƒ /api/integrations/google               190 B         103 kB
+├ ƒ /api/integrations/google/callback      190 B         103 kB
+├ ƒ /api/integrations/google/start         190 B         103 kB
+├ ƒ /api/integrations/hubspot              190 B         103 kB
+├ ƒ /api/intros                            190 B         103 kB
+├ ƒ /api/meetings/[id]                     190 B         103 kB
+├ ƒ /api/pipeline                          190 B         103 kB
+├ ƒ /api/relationships/assign              190 B         103 kB
+├ ƒ /api/scan/batch                        190 B         103 kB
+├ ƒ /api/scan/start                        190 B         103 kB
+├ ƒ /api/scan/status                       190 B         103 kB
+├ ƒ /api/vc/[id]                           190 B         103 kB
+├ ƒ /api/workspace                         190 B         103 kB
+├ ƒ /vc/[id]                             1.04 kB         107 kB
+├ ƒ /workspace                              2 kB         108 kB
+├ ƒ /workspace/import                    3.46 kB         106 kB
+├ ƒ /workspace/integrations              2.68 kB         105 kB
+├ ƒ /workspace/intros                       2 kB         108 kB
+├ ƒ /workspace/materials                 2.02 kB         105 kB
+├ ƒ /workspace/meetings/[id]                2 kB         108 kB
+├ ƒ /workspace/pipeline                     2 kB         108 kB
+├ ƒ /workspace/round                     2.02 kB         105 kB
+├ ƒ /workspace/signals                      2 kB         108 kB
+├ ƒ /workspace/timeline                     2 kB         108 kB
+└ ƒ /workspace/vc/[id]                   2.56 kB         109 kB
++ First Load JS shared by all             103 kB
+  ├ chunks/1255-5cd2fe06309409a0.js      46.5 kB
+  ├ chunks/4bd1b696-f785427dddbba9fb.js  54.2 kB
+  └ other shared chunks (total)             2 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

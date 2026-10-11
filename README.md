@@ -82,3 +82,52 @@ Only #12 uses AI (Gemini Flash). Everything else is deterministic and auditable.
 - The scoring weights are starting hypotheses, not proven predictors of replies.
 - Hobby cron fires within the scheduled hour, not at an exact minute.
 - DNS is resolved and checked before each fetch hop, but the fetch itself re-resolves the hostname, so a DNS-rebinding race is theoretically possible.
+
+## Private workspace (`/workspace`) and integrations
+
+Sign in at `/workspace` with your `ADMIN_TOKEN` (HttpOnly, SameSite=Strict session cookie). The public home page stays read-only and never shows notes. Everything below is admin-only.
+
+| Area | What it does |
+|---|---|
+| **Today** | 3-7 prioritised actions grouped by type (reply, commitments due, post-meeting, meeting prep, reach out, follow up). Each says why, shows whether it is *verified / inferred / yours*, can be dismissed for 14 days, and a "why these and not others" panel lists suppressed alternatives. |
+| **Pipeline** | Fit, timing signal, relationship state, next action, source freshness (last *successful* scan). |
+| **Signals** | Chronological verified evidence with source, dates, confidence and a "mark wrong" control. |
+| **Timeline** | Selected Gmail threads, investor meetings, commitments (proposed ones need your confirmation) and your notes; correct a state or a wrong investor match, delete records. |
+| **Intros** | Possible introduction paths from *your* contacts only; edges carry provenance, confidence, last-seen, can-act flag; unconfirmed edges are capped and never actionable. |
+| **Materials** | Company claims/documents (only **approved** items reach drafts and briefs), investor diligence requests. |
+| **Round health** | Coverage, stage distribution, gaps vs your targets, with assumptions listed. |
+| **Integrations** | Gmail, Calendar, HubSpot: scopes, account, last sync, errors, choose scope, disconnect, delete imported data. |
+| **Import / export** | CSV import with column mapping, dry run, duplicate detection (name, email, profile URL, firm), blank-fill, conflict resolution, undo, CSV export of pipeline and evidence. |
+
+### Setup for the workspace
+```bash
+npm run migrate -- supabase/migrations/004_workspace.sql supabase/migrations/005_user_rpcs.sql   # needs SUPABASE_ACCESS_TOKEN, or paste the SQL in the Supabase editor
+```
+Set `INTEGRATION_ENC_KEY` (and `APP_URL`) in `.env.local`/Vercel. Gmail and Calendar additionally need a Google Cloud OAuth client: enable the Gmail API and Google Calendar API, create a Web OAuth client with redirect URI `{APP_URL}/api/integrations/google/callback`, keep the consent screen in Testing mode and add yourself as a test user. `gmail.metadata` is a restricted scope, so offering this to other people requires Google's verification.
+
+### Design rules for the new features
+- **Import never overwrites.** Merge rules: match on investor+firm, then email, then profile URL; fill blank fields only; differing values become conflicts you resolve; identical values do nothing. A re-import is a no-op. All writes to `vc_pipeline` go through allow-listed Postgres functions (`005_user_rpcs.sql`) that cannot touch the four signal columns. The scanner never imports that code (enforced by tests).
+- **Gmail:** least privilege (`gmail.metadata` + `gmail.compose`). Reads headers, labels and snippets of the labels you pick, never full bodies. Creates **drafts only**; there is no send code or send scope anywhere (a test fails the build if one appears). Relationship states (`interested`, `meeting_requested`, `deck_requested`, `awaiting_founder`, `waiting_for_investor`, `pass`, `reconnect_later`) come from transparent rules and are marked *inferred* until you confirm them. Dated commitments are *proposed* for you to confirm. No email content is sent to Gemini.
+- **Calendar:** read-only, selected calendars only, incremental sync tokens, and only events whose guests match a tracked investor are stored; you can exclude or delete any event.
+- **HubSpot** (chosen as the one CRM; others deferred until customers ask): private-app token, encrypted at rest. A field-ownership matrix (`src/lib/crm/ownership.ts`) decides the owner of each field; companies are pulled through the same import pipeline (blank-fill + conflicts), and only founder-approved derived fields are pushed, one-way, to `vcpi_*` custom properties.
+- **Contacts and intros:** user-supplied contact CSV and optional, off-by-default meeting-derived edges (confidence 0.3, unconfirmed, not actionable). Language is "possible introduction path" until you confirm.
+- **Drafts and briefs** are deterministic templates over verified signals and *approved* claims: no model-written claims.
+- OAuth `state` is signed, expiring and bound to a browser nonce cookie; tokens are AES-256-GCM encrypted and never returned to the browser.
+
+### Components Map additions
+| # | Component | Path |
+|---|---|---|
+| 19 | Admin session auth | `src/lib/auth.ts`, `src/app/api/auth/login/route.ts` |
+| 20 | Import mapping + planner (dry run, merge rules) | `src/lib/importer/{mapping,plan,service}.ts`, `src/app/api/import/{preview,commit,conflicts,revert}/route.ts` |
+| 21 | User-initiated writer (allow-listed RPCs) | `src/lib/db/user-writer.ts`, `supabase/migrations/005_user_rpcs.sql` |
+| 22 | Export | `src/lib/export.ts`, `src/app/api/export/route.ts` |
+| 23 | Google OAuth + Gmail + Calendar | `src/lib/google/{oauth,gmail,calendar}.ts`, `src/app/api/integrations/google/**` |
+| 24 | Relationship rules (state, commitments, matching) | `src/lib/relationships/*` |
+| 25 | HubSpot connector + ownership matrix | `src/lib/crm/{hubspot,ownership}.ts`, `src/app/api/integrations/hubspot/route.ts` |
+| 26 | Warm-intro graph and path finder | `src/lib/intros/{paths,service}.ts`, `src/app/api/intros/route.ts` |
+| 27 | Today, fit, round health, briefs, drafts | `src/lib/insights/*`, `src/app/api/drafts/route.ts`, `src/app/api/meetings/[id]/route.ts` |
+| 28 | Workspace mutations (allow-listed) | `src/lib/workspace/entities.ts`, `src/app/api/workspace/route.ts` |
+| 29 | Workspace UI | `src/app/workspace/**`, `src/components/*` |
+
+### What is and is not verified
+Unit-tested offline: import planner, classifier, commitments, matching, MIME building, encryption/OAuth state, auth/CSRF, allow-lists, ownership guard, today/brief/draft/round logic, intro paths, and the write-boundary and never-send guards. Not exercised against live third-party accounts (needs your credentials): Google OAuth/Gmail/Calendar and HubSpot calls. They follow the documented APIs, but expect to fix small field-level surprises on first connection.
