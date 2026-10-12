@@ -19,12 +19,13 @@ type Item = { at: number; node: React.ReactNode; key: string };
 export default async function WorkspaceVc({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   // Everything this page needs is independent of everything else: fetch it in one round trip.
-  const [d, { data: events }, { data: meetings }, { data: commitments }, { data: dd }, paths, suggested] = await Promise.all([
+  const [d, { data: events }, { data: meetings }, { data: commitments }, { data: dd }, { data: contacts }, paths, suggested] = await Promise.all([
     getVcDetail(id, true), // private notes allowed
     db().from("relationship_events").select("*").eq("vc_id", id),
     db().from("calendar_events").select("*").eq("vc_id", id),
     db().from("commitments").select("*").eq("vc_id", id).in("status", ["proposed", "open"]),
     db().from("diligence_requests").select("*").eq("vc_id", id),
+    db().from("vc_contacts").select("id, person_name, email").eq("vc_id", id).order("created_at"),
     pathsForVc(id),
     buildDraftForVc(id),
   ]);
@@ -76,6 +77,26 @@ export default async function WorkspaceVc({ params }: { params: Promise<{ id: st
         </dl>
       </section>
       {suggested && <DraftPanel vcId={id} initial={{ subject: suggested.draft.subject, body: suggested.draft.body, to: suggested.to, warnings: suggested.draft.warnings, basedOn: suggested.basedOn }} />}
+
+      <section className="card mb-6">
+        <h2 className="border-b border-slate-900 bg-slate-50 px-4 py-3">Email addresses</h2>
+        <div className="p-4">
+          <p className="mb-3 text-[0.9rem] text-slate-500">Emails from these addresses (or from this firm&apos;s website domain) are matched to {vc.firm_name} when you sync Gmail or Calendar.</p>
+          {!!contacts?.length && (
+            <ul className="mb-4 divide-y divide-slate-200 border border-slate-300">
+              {contacts.map((c) => (
+                <li key={c.id} className="flex items-center justify-between gap-3 px-3 py-2 text-[0.9rem]">
+                  <span><b className="text-slate-900">{c.email}</b>{c.person_name ? <span className="text-slate-500"> · {c.person_name}</span> : null}</span>
+                  <ApiButton url="/api/workspace" body={{ entity: "contact", op: "delete", id: c.id }} label="Remove" tone="quiet" />
+                </li>
+              ))}
+            </ul>
+          )}
+          <ApiForm url="/api/workspace" className="grid max-w-xl gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end" submit="Add"
+            fields={[{ name: "email", label: "Email address", required: true, placeholder: "name@firm.com" }, { name: "person_name", label: "Name (optional)" }]}
+            envelope={{ entity: "contact", op: "insert", static: { vc_id: id } }} />
+        </div>
+      </section>
 
       <section className="mt-6">
         <h2 className="font-semibold">Introduction paths <Badge kind="neutral">possible</Badge></h2>

@@ -3,6 +3,7 @@ import { db } from "@/lib/db/client";
 import { classifyThread } from "@/lib/relationships/classify";
 import { extractCommitments } from "@/lib/relationships/commitments";
 import { buildMatchIndex, matchAddresses, parseAddresses } from "@/lib/relationships/match";
+import { keepUnmatchedThread, shapeLabels, type LabelOption } from "./labels";
 import { getAccessToken } from "./oauth";
 
 const API = "https://gmail.googleapis.com/gmail/v1/users/me";
@@ -14,11 +15,9 @@ async function gfetch<T>(provider: "gmail", path: string, init: RequestInit = {}
   return res.json() as Promise<T>;
 }
 
-export interface GmailLabel { id: string; name: string; type: string }
-
-export async function listLabels(): Promise<GmailLabel[]> {
-  const j = await gfetch<{ labels?: GmailLabel[] }>("gmail", "/labels");
-  return (j.labels ?? []).filter((l) => l.type === "user").sort((a, b) => a.name.localeCompare(b.name));
+export async function listLabels(): Promise<LabelOption[]> {
+  const j = await gfetch<{ labels?: { id: string; name: string; type: string }[] }>("gmail", "/labels");
+  return shapeLabels(j.labels ?? []);
 }
 
 interface GMessage { id: string; threadId: string; snippet?: string; internalDate?: string; labelIds?: string[]; payload?: { headers?: { name: string; value: string }[] } }
@@ -30,7 +29,7 @@ export function threadLink(threadId: string) {
   return `https://mail.google.com/mail/u/0/#all/${threadId}`;
 }
 
-export interface SyncResult { threads: number; matched: number; unmatched: number; commitments: number; skippedConfirmed: number }
+export interface SyncResult { threads: number; matched: number; unmatched: number; unrelated: number; commitments: number; skippedConfirmed: number }
 
 /**
  * Sync the founder-selected labels only. Metadata format: headers + snippet, never full bodies.
@@ -54,7 +53,7 @@ export async function syncGmail(maxThreads = 40): Promise<SyncResult> {
   }
 
   const limit = pLimit(4);
-  const res: SyncResult = { threads: 0, matched: 0, unmatched: 0, commitments: 0, skippedConfirmed: 0 };
+  const res: SyncResult = { threads: 0, matched: 0, unmatched: 0, unrelated: 0, commitments: 0, skippedConfirmed: 0 };
   await Promise.all([...ids].slice(0, maxThreads).map((id) => limit(async () => {
     const t = await gfetch<GThread>("gmail", `/threads/${id}?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Cc&metadataHeaders=Subject&metadataHeaders=Date`);
     const msgs = t.messages ?? [];
@@ -72,6 +71,8 @@ export async function syncGmail(maxThreads = 40): Promise<SyncResult> {
     const ref = `gmail:thread:${id}`;
 
     const { data: prev } = await db().from("relationship_events").select("id, state, state_confidence, vc_id").eq("external_ref", ref).maybeSingle();
+    // A broad built-in label (Inbox, Sent...) holds unrelated mail: keep only threads that match a tracked investor.
+    if (!prev && !match && !keepUnmatchedThread(msgs.map((m) => m.labelIds ?? []), labelIds)) { res.unrelated++; return; }
     const confirmed = prev?.state_confidence === "user_confirmed";
     if (confirmed) res.skippedConfirmed++;
     const row = {

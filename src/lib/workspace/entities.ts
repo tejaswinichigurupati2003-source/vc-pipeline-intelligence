@@ -41,6 +41,10 @@ export const ENTITIES: Record<string, Entity> = {
     table: "warm_edges", update: true, delete: true,
     cols: { user_confirmed: "bool", can_act: "bool", confidence: "num", visibility: { enum: ["founder_only", "team"] } },
   },
+  contact: {
+    table: "vc_contacts", insert: true, delete: true, required: ["vc_id", "email"],
+    cols: { vc_id: "uuid", person_name: "text", email: "text" },
+  },
   node: {
     table: "warm_nodes", insert: true, delete: true, required: ["kind", "label"],
     cols: { kind: { enum: ["contact", "portfolio_founder", "vc_partner"] }, label: "text", email: "text", company: "text", vc_id: "uuid", note: "text" },
@@ -83,6 +87,11 @@ export async function mutate(entity: string, op: "insert" | "update" | "delete",
   if (entity === "materials" && "approved" in clean) clean.approved_at = clean.approved ? new Date().toISOString() : null;
   if (op === "insert") {
     for (const r of e.required ?? []) if (clean[r] == null) throw new Error(`${r} is required`);
+    if (entity === "contact") {
+      const email = String(clean.email ?? "").trim().toLowerCase();
+      if (!/^[^s@]+@[^s@]+.[^s@]+$/.test(email)) throw new Error("Enter a valid email address");
+      clean.email = email; clean.source = "user";
+    }
     if (entity === "note") {
       if (clean.state) clean.state_confidence = "user_confirmed"; // a state the founder picks is their own word
       clean.kind ??= "note"; clean.provenance = "user"; clean.occurred_at ??= new Date().toISOString();
