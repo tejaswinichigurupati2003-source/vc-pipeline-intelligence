@@ -1,5 +1,7 @@
 # VC Fundraising Pipeline Intelligence
 
+**Live:** https://vc-pipeline-intelligence-two.vercel.app  ·  **Repo:** https://github.com/tejaswinichigurupati2003-source/vc-pipeline-intelligence
+
 MESA Cohort C4, Problem Statement 10. Twice a week, tells Vikram (first-time founder, Seed, B2B logistics SaaS) which of his ~50 VCs are worth contacting **this week**, with a source link and date from the last 30 days, and which are **quiet**.
 
 > Search discovers candidates. Code pre-filters them. Gemini classifies the evidence. Code validates dates and identity. Deterministic code scores. A single narrow database function writes four columns.

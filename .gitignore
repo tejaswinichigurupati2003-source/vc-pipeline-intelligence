@@ -9,3 +9,5 @@ next-env.d.ts
 dev.log
 dev.err
 build.log
+.vercel
+.env*
