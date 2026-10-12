@@ -55,15 +55,23 @@ function Card({ r }: { r: PipelineRow }) {
 function SetupNeeded({ missing, error }: { missing?: string[]; error?: string }) {
   return (
     <main className="mx-auto max-w-2xl rounded-lg border border-amber-300 bg-amber-50 p-6 text-sm">
-      <h1 className="text-xl font-bold">Almost there: connect the database</h1>
-      {missing && <p className="mt-2">Missing in <code>.env.local</code>: <b>{missing.join(", ")}</b>.</p>}
-      {error && <p className="mt-2 text-rose-800">Database error: {error}</p>}
-      <ol className="mt-4 list-decimal space-y-1 pl-5">
-        <li>Create a free Supabase project.</li>
-        <li>In its SQL editor run <code>supabase/migrations/001_schema.sql</code>, then <code>002_safe_update.sql</code>, then <code>003_seed_sources.sql</code>.</li>
-        <li>Copy the project URL and service-role key into <code>.env.local</code>, then restart the dev server.</li>
-        <li>Import the VCs: <code>npm run seed</code>.</li>
-      </ol>
+      {missing ? (
+        <>
+          <h1 className="text-xl font-bold">Almost there: connect the database</h1>
+          <p className="mt-2">Missing in <code>.env.local</code>: <b>{missing.join(", ")}</b>.</p>
+          <ol className="mt-4 list-decimal space-y-1 pl-5">
+            <li>Create a free Supabase project and run <code>supabase/migrations/001</code> to <code>005</code> in its SQL editor (or <code>npm run migrate</code>).</li>
+            <li>Copy the project URL and secret key into <code>.env.local</code>, then restart the dev server.</li>
+            <li>Import the VCs: <code>npm run seed</code>.</li>
+          </ol>
+        </>
+      ) : (
+        <>
+          <h1 className="text-xl font-bold">Can&apos;t reach the database right now</h1>
+          <p className="mt-2 text-rose-800">{error}</p>
+          <p className="mt-2">Your project and data are fine; this is usually temporary. Reload in a moment. &quot;JWT issued at future&quot; means this computer&apos;s clock and Supabase&apos;s differ: sync the Windows clock (Settings, Time &amp; language, Sync now). If it persists, check the keys in <code>.env.local</code>.</p>
+        </>
+      )}
     </main>
   );
 }
@@ -74,11 +82,16 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
   if (missing.length) return <SetupNeeded missing={missing} />;
   let rows: PipelineRow[];
   let run: Awaited<ReturnType<typeof latestRun>>;
+  const load = async () => ({ rows: await getPipeline(false), run: await latestRun() });
   try {
-    rows = await getPipeline(false);
-    run = await latestRun();
-  } catch (e) {
-    return <SetupNeeded error={(e as Error).message} />;
+    ({ rows, run } = await load());
+  } catch {
+    await new Promise((r) => setTimeout(r, 1500)); // one retry: transient errors (clock skew, cold connection) usually clear
+    try {
+      ({ rows, run } = await load());
+    } catch (e) {
+      return <SetupNeeded error={(e as Error).message} />;
+    }
   }
 
   let refreshed = 0, modeLabel = "gemini", stalled = false;
