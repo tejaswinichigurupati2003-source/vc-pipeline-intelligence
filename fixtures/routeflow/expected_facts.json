@@ -1,0 +1,31 @@
+{
+  "company_id": "syn_routeflow_001",
+  "expected_current_facts": {
+    "product": "Shipment visibility and workflow automation for freight forwarders",
+    "target_customer": "Mid-market freight-forwarding companies",
+    "current_arr": 1200000,
+    "current_arr_as_of": "2026-09-30",
+    "paying_customers": 28,
+    "fundraising_goal_usd": 2000000,
+    "cac": null
+  },
+  "known_stale_facts": [
+    {
+      "fact_key": "arr",
+      "value": 850000,
+      "as_of": "2026-03-31",
+      "source": "pitch_deck.md"
+    }
+  ],
+  "known_gaps": [
+    "Customer acquisition cost is not consistently measured",
+    "ERP integration coverage is incomplete"
+  ],
+  "expected_behaviours": [
+    "Prefer the September metrics report for current ARR",
+    "Do not describe the older deck ARR as current",
+    "Do not invent a CAC value",
+    "Mention integration and onboarding limitations when relevant",
+    "Preserve the date and source of important metrics"
+  ]
+}

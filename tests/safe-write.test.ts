@@ -37,7 +37,7 @@ describe("write boundary (release-blocking)", () => {
     const callers = files.filter((f) => /import_fill_blanks|import_apply_resolution|user_delete_vc|user_set_contact_status/.test(readFileSync(f, "utf8"))).map((f) => path.basename(f));
     expect(callers).toEqual(["user-writer.ts"]);
     const importers = files.filter((f) => /user-writer/.test(readFileSync(f, "utf8"))).map((f) => path.relative(SRC, f).replace(/\\/g, "/"));
-    expect(importers.sort()).toEqual(["app/api/investors/status/route.ts", "lib/importer/service.ts"]);
+    expect(importers.sort()).toEqual(["app/api/investors/status/route.ts", "lib/expansion/service.ts", "lib/importer/service.ts"]);
     for (const scanFile of ["lib/scan/scan-vc.ts", "lib/scan/batch.ts"]) expect(readFileSync(path.join(SRC, scanFile), "utf8")).not.toMatch(/user-writer|importer/);
   });
 

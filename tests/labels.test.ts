@@ -27,7 +27,7 @@ describe("action labels: stored spec strings become clean product language", () 
 });
 
 describe("signal strength bands", () => {
-  it.each([[null, "none"], [0, "quiet"], [39, "quiet"], [40, "warm"], [69, "warm"], [70, "hot"], [100, "hot"]])("%s -> %s", (score, band) => {
+  it.each([[null, "none"], [0, "quiet"], [1, "warm"], [29, "warm"], [30, "hot"], [70, "hot"], [100, "hot"]])("%s -> %s", (score, band) => {
     expect(signalStrength(score as number | null).band).toBe(band);
   });
 });

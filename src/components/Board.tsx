@@ -11,6 +11,13 @@ import { avatarStyle, formatAction, initials, signalStrength, STAGES, TONE_CLASS
 type Filter = "all" | "hot" | "warm" | "quiet" | "stale";
 type Sort = "score" | "name" | "recent";
 
+const HINT: Record<Filter, string> = {
+  all: "Every investor on your list",
+  hot: "Signal strength 30+: recent verified activity that is worth acting on",
+  warm: "Signal strength 1 to 29: some verified activity, but light",
+  quiet: "No verified activity found in the last 30 days",
+  stale: "The last scan failed, so these show older values",
+};
 const FILTERS: { key: Filter; label: string }[] = [
   { key: "all", label: "All" }, { key: "hot", label: "Hot" }, { key: "warm", label: "Warm" }, { key: "quiet", label: "Quiet" }, { key: "stale", label: "Needs refresh" },
 ];
@@ -129,11 +136,12 @@ export default function Board({ rows, editable, detailBase, initialQuery = "" }:
         </div>
         <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Signal filter">
           {FILTERS.map((f) => (
-            <button key={f.key} onClick={() => setFilter(f.key)} className={`border px-3 py-1.5 text-[0.8rem] font-semibold transition ${filter === f.key ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 bg-white text-slate-600 hover:border-slate-900"}`}>
+            <button key={f.key} title={HINT[f.key]} onClick={() => setFilter(f.key)} className={`border px-3 py-1.5 text-[0.8rem] font-semibold transition ${filter === f.key ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 bg-white text-slate-600 hover:border-slate-900"}`}>
               {f.label} <span className={filter === f.key ? "text-slate-300" : "text-slate-400"}>{counts[f.key]}</span>
             </button>
           ))}
         </div>
+        <p className="basis-full text-xs text-slate-500">{HINT[filter]}. Signal strength is scored from verified news in the last 30 days.</p>
         <div className="ml-auto flex items-center gap-2">
           <label className="flex items-center gap-2 text-[0.8rem] font-semibold text-slate-500">Sort
             <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} className="!w-auto !py-1.5">

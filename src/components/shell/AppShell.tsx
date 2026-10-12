@@ -47,6 +47,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
       { href: "/conversations", label: "Conversations", icon: "chat", badge: proposed.count || null },
       { href: "/drafts", label: "Drafts", icon: "mail" },
       { href: "/intros", label: "Warm intros", icon: "intro" },
+      { href: "/discover", label: "Discover investors", icon: "compass" },
     ] },
     { title: "Prepare", items: [{ href: "/data-room", label: "Data room", icon: "folder" }] },
     { title: "Settings", items: [{ href: "/integrations", label: "Integrations", icon: "plug" }, { href: "/import", label: "Import & export", icon: "upload" }] },

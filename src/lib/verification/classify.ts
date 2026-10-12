@@ -80,7 +80,7 @@ const defaultGenerate: Generate = (model, system, user) => geminiSlots(() => gen
  * Classification needs little model "thinking" (the answers are re-checked by code), and a lower level is much faster:
  * "low" gave the same verdicts in a third of the time. GEMINI_THINKING = low (default) | medium | high | off.
  */
-const thinking = () => {
+export const thinking = () => {
   const level = (process.env.GEMINI_THINKING ?? "low").toLowerCase();
   return level === "off" || level === "default" ? {} : { thinkingConfig: { thinkingLevel: level.toUpperCase() as never } };
 };

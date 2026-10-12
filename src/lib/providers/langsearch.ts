@@ -37,18 +37,18 @@ export function parseLangSearch(json: unknown): Omit<Candidate, "id">[] {
 // All investors scanned in parallel share this cap, so bursts stay inside the provider's rate limit.
 const searchSlots = pLimit(5);
 
-export function langSearch(query: string, count = 10) {
-  return searchSlots(() => langSearchOnce(query, count));
+export function langSearch(query: string, count = 10, freshness: "oneMonth" | "oneYear" = "oneMonth") {
+  return searchSlots(() => langSearchOnce(query, count, freshness));
 }
 
-async function langSearchOnce(query: string, count: number): Promise<Omit<Candidate, "id">[]> {
+async function langSearchOnce(query: string, count: number, freshness: string): Promise<Omit<Candidate, "id">[]> {
   const res = await fetchWithRetry("https://api.langsearch.com/v1/web-search", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${requireEnv("LANGSEARCH_API_KEY")}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ query, freshness: "oneMonth", count }),
+    body: JSON.stringify({ query, freshness, count }),
   });
   if (!res.ok) {
     throw new ProviderError(res.status === 429 ? "search_quota" : "search_error", `LangSearch HTTP ${res.status}`, res.status);

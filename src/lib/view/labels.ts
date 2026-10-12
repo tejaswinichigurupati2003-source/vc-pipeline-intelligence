@@ -46,8 +46,8 @@ export function formatAction(action: string | null, bucket?: string): ActionView
 
 export function signalStrength(score: number | null): { label: string; tone: Tone; band: "hot" | "warm" | "quiet" | "none" } {
   if (score === null || score === undefined) return { label: "No data", tone: "muted", band: "none" };
-  if (score >= 70) return { label: "Hot", tone: "go", band: "hot" };
-  if (score >= 40) return { label: "Warm", tone: "caution", band: "warm" };
+  if (score >= 30) return { label: "Hot", tone: "go", band: "hot" };
+  if (score >= 1) return { label: "Warm", tone: "caution", band: "warm" };
   return { label: "Quiet", tone: "muted", band: "quiet" };
 }
 
