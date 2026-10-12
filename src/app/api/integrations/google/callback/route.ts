@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const back = (q: string) => NextResponse.redirect(new URL(`/workspace/integrations?${q}`, process.env.APP_URL ?? url.origin));
+  const back = (q: string) => NextResponse.redirect(new URL(`/integrations?${q}`, process.env.APP_URL ?? url.origin));
   if (url.searchParams.get("error")) return back(`error=${encodeURIComponent(url.searchParams.get("error")!)}`);
 
   const payload = verifyState(url.searchParams.get("state") ?? "");

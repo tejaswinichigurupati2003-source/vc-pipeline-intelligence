@@ -6,9 +6,9 @@
 const base = process.argv[2] ?? "http://localhost:3000";
 const rows = (await (await fetch(`${base}/api/pipeline`)).json()).rows as { id: string }[];
 const paths = [
-  "/", "/workspace", "/workspace/pipeline", "/workspace/signals", "/workspace/timeline", "/workspace/intros",
-  "/workspace/materials", "/workspace/round", "/workspace/integrations", "/workspace/import",
-  ...(rows[0] ? [`/workspace/vc/${rows[0].id}`, `/vc/${rows[0].id}`] : []),
+  "/", "/", "/investors", "/signals", "/conversations", "/intros",
+  "/data-room", "/round", "/integrations", "/import",
+  ...(rows[0] ? [`/investors/${rows[0].id}`, `/investors/${rows[0].id}`] : []),
 ];
 for (const p of paths) {
   const t = Date.now();

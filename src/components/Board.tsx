@@ -23,21 +23,17 @@ function matches(r: BoardRow, f: Filter) {
 }
 
 function Chip({ tone, children, title }: { tone: Tone; children: React.ReactNode; title?: string }) {
-  return <span title={title} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.7rem] font-bold ring-1 ring-inset ${TONE_CLASS[tone].chip}`}>{children}</span>;
+  return <span title={title} className={`inline-flex items-center gap-1 px-1.5 py-[1px] text-[0.66rem] font-bold uppercase tracking-[0.05em] ${TONE_CLASS[tone].chip}`}>{children}</span>;
 }
 
-function ScoreRing({ score, stale }: { score: number | null; stale: boolean }) {
+/** Flat score cell: number in Panchang with a fill bar along the bottom edge. */
+function ScoreCell({ score, stale }: { score: number | null; stale: boolean }) {
   const s = signalStrength(score);
-  const r = 15, c = 2 * Math.PI * r;
-  const pct = score === null ? 0 : Math.min(100, score) / 100;
-  const stroke = stale ? "#f43f5e" : s.band === "hot" ? "#10b981" : s.band === "warm" ? "#f59e0b" : "#b3bac9";
+  const fill = stale ? "bg-rose-600" : s.band === "hot" ? "bg-emerald-600" : s.band === "warm" ? "bg-amber-500" : "bg-slate-400";
   return (
-    <div className="relative h-11 w-11 shrink-0" title={stale ? "Last scan failed" : `Signal strength: ${s.label}${score !== null ? ` (${score}/100)` : ""}`}>
-      <svg viewBox="0 0 36 36" className="h-11 w-11 -rotate-90">
-        <circle cx="18" cy="18" r={r} fill="none" stroke="#eff1f6" strokeWidth="3.5" />
-        <circle cx="18" cy="18" r={r} fill="none" stroke={stroke} strokeWidth="3.5" strokeLinecap="round" strokeDasharray={`${c * pct} ${c}`} />
-      </svg>
-      <span className="absolute inset-0 grid place-items-center text-[0.78rem] font-extrabold text-slate-800">{stale ? "!" : score ?? "–"}</span>
+    <div className="w-12 shrink-0 border border-slate-300 bg-white" title={stale ? "Last scan failed" : `Signal strength: ${s.label}${score !== null ? ` (${score}/100)` : ""}`}>
+      <div className="grid h-8 place-items-center font-display text-[0.95rem] font-semibold text-slate-900">{stale ? "!" : score ?? "–"}</div>
+      <div className="h-1 bg-slate-100"><div className={`h-full ${fill}`} style={{ width: `${stale ? 100 : Math.min(100, score ?? 0)}%` }} /></div>
     </div>
   );
 }
@@ -54,22 +50,22 @@ function InvestorCard({ r, href, draggable, dragging, onDragStart, onDragEnd }: 
       draggable={draggable}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      className={`group relative shrink-0 animate-rise overflow-hidden rounded-xl border bg-white p-3.5 shadow-card transition hover:-translate-y-px hover:shadow-lift ${draggable ? "cursor-grab active:cursor-grabbing" : ""} ${dragging ? "opacity-40" : ""} ${hot ? "border-emerald-200" : "border-slate-200"}`}
+      className={`group relative shrink-0 animate-rise border bg-white p-3.5 transition-[transform,box-shadow,border-color] hover:-translate-x-px hover:-translate-y-px hover:border-slate-900 hover:shadow-lift ${draggable ? "cursor-grab active:cursor-grabbing" : ""} ${dragging ? "opacity-40" : ""} border-slate-300`}
     >
-      {hot && <span className="absolute inset-y-0 left-0 w-1 bg-emerald-500" />}
+      {hot && <span className="absolute inset-y-0 left-0 w-[3px] grad-cherry" />}
       <div className="flex items-start gap-3">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] text-[0.8rem] font-extrabold" style={avatarStyle(r.firm)}>{initials(r.firm)}</span>
+        <span className="grid h-9 w-9 shrink-0 place-items-center font-display text-[0.72rem] font-bold" style={avatarStyle(r.firm)}>{initials(r.firm)}</span>
         <div className="min-w-0 flex-1">
           <Link href={href} draggable={false} className="block truncate text-[0.95rem] font-bold text-slate-900 no-underline hover:text-indigo-700 hover:no-underline">{r.firm}</Link>
           <div className="truncate text-xs text-slate-500">{r.person ?? "Firm-level contact"}</div>
         </div>
-        <ScoreRing score={r.score} stale={stale} />
+        <ScoreCell score={r.score} stale={stale} />
       </div>
 
       {s.text ? (
-        <p className={`mt-3 line-clamp-2 text-[0.84rem] leading-snug ${s.quiet ? "text-slate-400" : "text-slate-700"}`}>{s.text}{s.extra > 0 && <span className="text-slate-400"> · +{s.extra} more</span>}</p>
+        <p className={`mt-3 line-clamp-2 text-[0.85rem] leading-snug ${s.quiet ? "text-slate-400" : "text-slate-700"}`}>{s.text}{s.extra > 0 && <span className="text-slate-400"> · +{s.extra} more</span>}</p>
       ) : (
-        <p className="mt-3 text-[0.84rem] text-slate-400">{stale ? "Waiting for a successful refresh." : "Not scanned yet."}</p>
+        <p className="mt-3 text-[0.85rem] text-slate-400">{stale ? "Waiting for a successful refresh." : "Not scanned yet."}</p>
       )}
 
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
@@ -78,16 +74,15 @@ function InvestorCard({ r, href, draggable, dragging, onDragStart, onDragEnd }: 
         {r.rulesOnly && <Chip tone="muted" title="Scanned with simple rules because Gemini was unavailable">Rules-only</Chip>}
       </div>
 
-      <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5 text-[0.72rem] text-slate-500">
+      <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-2.5 text-[0.72rem] text-slate-500">
         {r.source ? (
           <a href={r.source.url} target="_blank" rel="noopener noreferrer" draggable={false} className="inline-flex max-w-[60%] items-center gap-1 truncate font-semibold text-slate-500 no-underline hover:text-indigo-700 hover:no-underline"><Icon name="link" className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{r.source.domain}</span></a>
         ) : <span className="inline-flex items-center gap-1"><Icon name="clock" className="h-3.5 w-3.5" />{r.lastSignal ? `Last signal ${timeAgo(r.lastSignal)}` : "No signal yet"}</span>}
-        <span title="Thesis-keyword fit from your notes">Fit <b className="text-slate-700">{r.fit}</b></span>
+        <span title="Thesis-keyword fit from your notes">FIT <b className="text-slate-800">{r.fit}</b></span>
       </div>
     </article>
   );
 }
-
 export default function Board({ rows, editable, detailBase, initialQuery = "" }: { rows: BoardRow[]; editable: boolean; detailBase: string; initialQuery?: string }) {
   const router = useRouter();
   const [data, setData] = useState(rows);
@@ -134,7 +129,7 @@ export default function Board({ rows, editable, detailBase, initialQuery = "" }:
         </div>
         <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Signal filter">
           {FILTERS.map((f) => (
-            <button key={f.key} onClick={() => setFilter(f.key)} className={`rounded-full px-3 py-1.5 text-[0.8rem] font-semibold transition ${filter === f.key ? "bg-slate-900 text-white" : "bg-white text-slate-600 ring-1 ring-inset ring-slate-200 hover:bg-slate-50"}`}>
+            <button key={f.key} onClick={() => setFilter(f.key)} className={`border px-3 py-1.5 text-[0.8rem] font-semibold transition ${filter === f.key ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 bg-white text-slate-600 hover:border-slate-900"}`}>
               {f.label} <span className={filter === f.key ? "text-slate-300" : "text-slate-400"}>{counts[f.key]}</span>
             </button>
           ))}
@@ -145,9 +140,9 @@ export default function Board({ rows, editable, detailBase, initialQuery = "" }:
               <option value="score">Signal strength</option><option value="recent">Latest signal</option><option value="name">Name A–Z</option>
             </select>
           </label>
-          <div className="flex overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card">
+          <div className="flex border border-slate-300 bg-white">
             {(["board", "list"] as const).map((v) => (
-              <button key={v} onClick={() => setView(v)} aria-label={`${v} view`} className={`grid h-9 w-9 place-items-center ${view === v ? "bg-indigo-50 text-indigo-700" : "text-slate-500 hover:bg-slate-50"}`}><Icon name={v === "board" ? "grid" : "list"} className="h-4 w-4" /></button>
+              <button key={v} onClick={() => setView(v)} aria-label={`${v} view`} className={`grid h-9 w-9 place-items-center ${view === v ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-50"}`}><Icon name={v === "board" ? "grid" : "list"} className="h-4 w-4" /></button>
             ))}
           </div>
         </div>
@@ -164,20 +159,20 @@ export default function Board({ rows, editable, detailBase, initialQuery = "" }:
                 onDragOver={editable ? (e) => { e.preventDefault(); setOver(st.key); } : undefined}
                 onDragLeave={editable ? () => setOver((o) => (o === st.key ? null : o)) : undefined}
                 onDrop={editable ? (e) => { e.preventDefault(); const id = e.dataTransfer.getData("text/plain") || dragId; setOver(null); setDragId(null); if (id) move(id, st.key); } : undefined}
-                className={`flex min-h-[18rem] w-[19.5rem] shrink-0 snap-start flex-col rounded-2xl p-2.5 transition xl:w-auto ${isOver ? "bg-indigo-50 ring-2 ring-indigo-300" : "bg-slate-100/70"}`}
+                className={`flex min-h-[18rem] w-[19.5rem] shrink-0 snap-start flex-col border p-2.5 transition xl:w-auto ${isOver ? "border-indigo-600 bg-indigo-50" : "border-slate-300 bg-white/55"}`}
               >
-                <header className="mb-2.5 flex items-center gap-2 px-1.5 pt-1">
-                  <span className={`h-2.5 w-2.5 rounded-full ${TONE_CLASS[st.tone].dot}`} />
-                  <h2 className="text-[0.92rem]">{st.title}</h2>
-                  <span className="rounded-full bg-white px-2 py-0.5 text-[0.72rem] font-bold text-slate-500 ring-1 ring-inset ring-slate-200">{col.length}</span>
-                  <span className="ml-auto text-[0.72rem] text-slate-400">{st.hint}</span>
+                <header title={st.hint} className="mb-2.5 flex items-center gap-2 border-b border-slate-900 px-1.5 pb-2.5 pt-1">
+                  <span className={`h-2.5 w-2.5 ${TONE_CLASS[st.tone].dot}`} />
+                  <h2>{st.title}</h2>
+                  <span className="border border-slate-300 bg-white px-1.5 text-[0.72rem] font-bold leading-[1.2rem] text-slate-700">{col.length}</span>
+                  
                 </header>
                 <div className="scroll-thin flex flex-1 flex-col gap-2.5 overflow-y-auto xl:max-h-[calc(100vh-17rem)]">
                   {col.map((r) => (
                     <InvestorCard key={r.id} r={r} href={`${detailBase}/${r.id}`} draggable={editable} dragging={dragId === r.id}
                       onDragStart={(e) => { e.dataTransfer.setData("text/plain", r.id); e.dataTransfer.effectAllowed = "move"; setDragId(r.id); }} onDragEnd={() => { setDragId(null); setOver(null); }} />
                   ))}
-                  {!col.length && <div className="grid flex-1 place-items-center rounded-xl border-2 border-dashed border-slate-200 p-6 text-center text-[0.8rem] text-slate-400">{editable ? "Drop an investor here" : "Nothing here"}</div>}
+                  {!col.length && <div className="grid flex-1 place-items-center border border-dashed border-slate-300 p-6 text-center text-[0.8rem] text-slate-400">{editable ? "Drop an investor here" : "Nothing here"}</div>}
                 </div>
               </section>
             );
@@ -186,7 +181,7 @@ export default function Board({ rows, editable, detailBase, initialQuery = "" }:
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full text-left text-[0.88rem]">
-            <thead><tr className="border-b border-slate-200 text-[0.7rem] uppercase tracking-wider text-slate-500">
+            <thead><tr className="border-b border-slate-900 text-[0.68rem] uppercase tracking-[0.1em] text-slate-500">
               <th className="px-4 py-3">Investor</th><th className="px-3 py-3">Stage</th><th className="px-3 py-3">Signal</th><th className="px-3 py-3">Next step</th><th className="px-3 py-3">Latest</th><th className="px-3 py-3 text-right">Fit</th>
             </tr></thead>
             <tbody>
@@ -194,7 +189,7 @@ export default function Board({ rows, editable, detailBase, initialQuery = "" }:
                 const a = formatAction(r.action, r.bucket); const sg = signalStrength(r.score); const stale = r.bucket === "stale";
                 return (
                   <tr key={r.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70">
-                    <td className="px-4 py-3"><div className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-lg text-[0.72rem] font-extrabold" style={avatarStyle(r.firm)}>{initials(r.firm)}</span>
+                    <td className="px-4 py-3"><div className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center font-display text-[0.66rem] font-bold" style={avatarStyle(r.firm)}>{initials(r.firm)}</span>
                       <div><Link href={`${detailBase}/${r.id}`} className="font-bold text-slate-900 no-underline hover:text-indigo-700 hover:no-underline">{r.firm}</Link><div className="text-xs text-slate-500">{r.person ?? ""}</div></div></div></td>
                     <td className="px-3 py-3">{STAGES.find((s) => s.key === r.stage)?.title}</td>
                     <td className="px-3 py-3"><Chip tone={stale ? "alert" : sg.tone}>{stale ? "Needs refresh" : sg.label}{!stale && r.score !== null ? ` · ${r.score}` : ""}</Chip></td>
@@ -211,7 +206,7 @@ export default function Board({ rows, editable, detailBase, initialQuery = "" }:
       )}
 
       {editable && view === "board" && <p className="mt-1 text-center text-xs text-slate-400">Drag a card to change its stage.</p>}
-      {toast && <div className={`fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full px-4 py-2 text-sm font-semibold text-white shadow-lift ${toast.bad ? "bg-rose-600" : "bg-slate-900"}`}>{toast.text}</div>}
+      {toast && <div className={`fixed bottom-6 left-1/2 z-50 -translate-x-1/2 border border-slate-900 px-4 py-2 text-sm font-semibold text-white ${toast.bad ? "bg-rose-700" : "grad-cherry"}`}>{toast.text}</div>}
     </div>
   );
 }

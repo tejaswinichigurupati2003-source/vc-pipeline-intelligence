@@ -2,33 +2,48 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { color-scheme: light; }
+:root { color-scheme: light; --cherry: #7e2c34; --ink: #1d1514; }
 
 @layer base {
   html { font-size: 14.5px; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
-  body { @apply bg-slate-50 font-sans text-slate-800; font-feature-settings: "cv11", "ss01"; }
-  h1 { @apply text-[1.65rem] font-extrabold leading-tight tracking-tight text-slate-900; }
-  h2 { @apply text-[1.02rem] font-bold tracking-tight text-slate-900; }
-  h3 { @apply font-semibold text-slate-900; }
+  body { @apply font-sans text-slate-800; background-color: #f6f1ed; font-variant-numeric: tabular-nums; }
+
+  /* Headlines: Panchang. Data and paragraphs: General Sans. */
+  h1 { @apply font-display text-[1.5rem] font-semibold leading-[1.15] tracking-[-0.01em] text-slate-900; }
+  h2 { @apply font-display text-[0.8rem] font-semibold uppercase leading-snug tracking-[0.06em] text-slate-900; }
+  h3 { @apply font-display text-[0.9rem] font-semibold text-slate-900; }
   a { @apply text-indigo-700 underline-offset-2 hover:underline; }
-  ::selection { background: #d2cbff; }
+  ::selection { background: #e7c4bf; color: #1d1514; }
 
   input:not([type="checkbox"]):not([type="file"]), select, textarea {
-    @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[0.93rem] text-slate-800 shadow-card transition;
+    @apply w-full border border-slate-300 bg-white px-3 py-2 text-[0.93rem] text-slate-800 transition-colors;
   }
   input::placeholder, textarea::placeholder { @apply text-slate-400; }
-  input:not([type="checkbox"]):focus, select:focus, textarea:focus { @apply border-indigo-400 outline-none shadow-ring; }
-  input[type="checkbox"] { @apply h-4 w-4 rounded border-slate-300 accent-indigo-600; }
-  code { @apply rounded bg-slate-100 px-1.5 py-0.5 text-[0.85em] text-slate-700; }
+  input:not([type="checkbox"]):focus, select:focus, textarea:focus { @apply border-indigo-600 outline outline-1 outline-indigo-600; outline-offset: 0; }
+  input[type="checkbox"] { @apply h-4 w-4 border border-slate-400 accent-indigo-700; }
+  code { @apply border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[0.85em] text-slate-700; }
   dt { @apply text-slate-500; }
 }
 
 @layer components {
-  .card { @apply rounded-xl border border-slate-200 bg-white shadow-card; }
-  .card-sm { @apply rounded-lg border border-slate-200 bg-white shadow-card; }
-  .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition disabled:opacity-50; }
-  .btn-primary { @apply btn bg-indigo-600 text-white shadow-card hover:bg-indigo-700; }
-  .btn-ghost { @apply btn border border-slate-200 bg-white text-slate-700 hover:bg-slate-50; }
-  .eyebrow { @apply text-[0.7rem] font-bold uppercase tracking-[0.08em] text-slate-500; }
-  .scroll-thin { scrollbar-width: thin; scrollbar-color: #cdd2de transparent; }
+  .card { @apply border border-slate-300 bg-white; }
+  .card-sm { @apply border border-slate-300 bg-white; }
+  .btn { @apply inline-flex items-center justify-center gap-2 border border-transparent px-3.5 py-2 text-sm font-semibold transition disabled:opacity-50; }
+  .btn-primary { @apply btn border-slate-900 text-white hover:brightness-110; background-image: linear-gradient(135deg, #8a303a 0%, #62222b 55%, #3b141a 100%); }
+  .btn-ghost { @apply btn border-slate-300 bg-white text-slate-700 hover:border-slate-900 hover:bg-slate-50; }
+  .eyebrow { @apply text-[0.66rem] font-semibold uppercase tracking-[0.14em] text-slate-500; }
+  .scroll-thin { scrollbar-width: thin; scrollbar-color: #c7b9af transparent; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* Design elements */
+  .grad-cherry { background-image: linear-gradient(115deg, #230b0f 0%, #4d1a21 42%, #7e2c34 78%, #a4474f 100%); }
+  .hatch::after { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.07) 0 1px, transparent 1px 11px); }
+  .blueprint {
+    background-image:
+      radial-gradient(900px 420px at 100% -8%, rgba(126,44,52,.14), transparent 62%),
+      linear-gradient(rgba(29,21,20,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(29,21,20,.05) 1px, transparent 1px);
+    background-size: auto, 44px 44px, 44px 44px;
+  }
+  .rule-cherry { height: 1px; background-image: linear-gradient(90deg, #7e2c34 0%, #c7b9af 38%, transparent 100%); }
 }

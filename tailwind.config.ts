@@ -1,32 +1,38 @@
 import type { Config } from "tailwindcss";
 
 /**
- * Design tokens. `slate` and `indigo` are remapped on purpose so every existing utility class picks up the new
- * palette: slate -> a cooler, slightly blue-grey "ink" scale; indigo -> the brand violet.
+ * Design tokens: "architectural" cherry-brown. Flat planes, 1px crisp borders, zero radius, hard-offset hover shadow.
+ * `slate` and `indigo` are remapped on purpose so every existing utility class picks up the palette:
+ *   slate  -> warm brown-greys ("paper" to "ink")
+ *   indigo -> the cherry-brown brand scale
  */
 export default {
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
+    borderRadius: { none: "0", sm: "0", DEFAULT: "0", md: "0", lg: "0", xl: "0", "2xl": "0", "3xl": "0", full: "0" },
     extend: {
-      fontFamily: { sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"] },
+      fontFamily: {
+        display: ["Panchang", "General Sans", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans: ["General Sans", "ui-sans-serif", "system-ui", "sans-serif"],
+      },
       colors: {
         slate: {
-          50: "#f7f8fb", 100: "#eff1f6", 200: "#e3e6ee", 300: "#cdd2de", 400: "#99a1b4",
-          500: "#6a7287", 600: "#4f566a", 700: "#383e50", 800: "#222735", 900: "#121622", 950: "#0b0e18",
+          50: "#faf7f4", 100: "#f3eeea", 200: "#ddd2ca", 300: "#c7b9af", 400: "#a09189",
+          500: "#76675f", 600: "#5a4c46", 700: "#433734", 800: "#2d2422", 900: "#1d1514", 950: "#120d0c",
         },
         indigo: {
-          50: "#f3f1ff", 100: "#e8e4ff", 200: "#d2cbff", 300: "#b3a8ff", 400: "#8f80f8",
-          500: "#7260ee", 600: "#5f4bdf", 700: "#4e3cc2", 800: "#3f319c", 900: "#2a2169",
+          50: "#fbf2f0", 100: "#f4e2df", 200: "#e7c4bf", 300: "#d69a94", 400: "#be6b67",
+          500: "#a04247", 600: "#7e2c34", 700: "#62222b", 800: "#481a21", 900: "#321217",
         },
       },
-      borderRadius: { lg: "0.875rem", xl: "1.125rem", "2xl": "1.5rem" },
+      borderColor: { DEFAULT: "#c7b9af" },
       boxShadow: {
-        card: "0 1px 2px rgba(18,22,34,.04), 0 1px 1px rgba(18,22,34,.03)",
-        lift: "0 8px 24px -6px rgba(18,22,34,.14), 0 2px 6px rgba(18,22,34,.06)",
-        ring: "0 0 0 4px rgba(114,96,238,.16)",
+        card: "none",
+        lift: "4px 4px 0 0 #1d1514",
+        ring: "none",
       },
-      keyframes: { rise: { from: { opacity: "0", transform: "translateY(6px)" }, to: { opacity: "1", transform: "none" } } },
-      animation: { rise: "rise .35s ease-out both" },
+      keyframes: { rise: { from: { opacity: "0", transform: "translateY(4px)" }, to: { opacity: "1", transform: "none" } } },
+      animation: { rise: "rise .3s ease-out both" },
     },
   },
   plugins: [],

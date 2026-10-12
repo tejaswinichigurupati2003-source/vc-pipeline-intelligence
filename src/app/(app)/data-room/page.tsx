@@ -1,5 +1,6 @@
 import { ApiButton, ApiForm, Badge } from "@/components/ui";
 import PageHeader from "@/components/shell/PageHeader";
+import SettingsForm from "@/components/SettingsForm";
 import { db } from "@/lib/db/client";
 import { fmtDate } from "@/lib/view/format";
 import { getSettings } from "@/lib/workspace/data";
@@ -14,18 +15,19 @@ export default async function Materials() {
   const { data: dd } = await db().from("diligence_requests").select("*").order("created_at", { ascending: false });
   const approved = (materials ?? []).filter((m) => m.approved).length;
   const open = (dd ?? []).filter((d) => d.status !== "provided").length;
-  const settingField = (key: string, label: string, def?: string) => ({ key, label, def });
 
   return (
     <main>
       <PageHeader title="Data room" subtitle={<>Drafts and meeting briefs only ever use claims you have <b>approved</b>. Document readiness: {approved} approved item(s), {open} open investor request(s).</>} />
 
-      <section className="mb-8 card p-4">
-        <h2 className="font-semibold">Company profile (used in drafts)</h2>
-        <div className="mt-2 grid gap-3 md:grid-cols-3">
-          {[settingField("founder_name", "Your name", s.founder_name), settingField("company_name", "Company name", s.company_name), settingField("company_one_liner", "One-liner", s.company_one_liner)].map((f) => (
-            <ApiForm key={f.key} url="/api/workspace" method="PUT" fields={[{ name: "value", label: f.label, defaultValue: f.def ?? "", required: true }]} extra={{ key: f.key }} submit="Save" />
-          ))}
+      <section className="mb-8 card">
+        <h2 className="border-b border-slate-900 bg-slate-50 px-4 py-3">Company profile <span className="font-sans text-[0.72rem] normal-case tracking-normal text-slate-500">used in drafts and briefs</span></h2>
+        <div className="p-4">
+          <SettingsForm columns={3} fields={[
+            { key: "founder_name", label: "Your name", value: s.founder_name ?? "" },
+            { key: "company_name", label: "Company name", value: s.company_name ?? "" },
+            { key: "company_one_liner", label: "One-liner", value: s.company_one_liner ?? "", hint: "One sentence on what you build" },
+          ]} />
         </div>
       </section>
 

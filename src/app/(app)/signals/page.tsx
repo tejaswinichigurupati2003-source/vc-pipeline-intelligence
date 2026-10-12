@@ -25,7 +25,7 @@ export default async function Signals() {
               <div>
                 <a href={s.source_url} target="_blank" rel="noopener noreferrer" className="font-medium">{s.title}</a>
                 <div className="text-xs text-slate-500">
-                  <Link href={`/workspace/vc/${s.vc_id}`}>{name.get(s.vc_id)}</Link> · {fmtDate(s.when)} · {s.signal_type.replace(/_/g, " ")} · {s.source_domain} ({s.source_tier}) · relevance {s.relevance_score}
+                  <Link href={`/investors/${s.vc_id}`}>{name.get(s.vc_id)}</Link> · {fmtDate(s.when)} · {s.signal_type.replace(/_/g, " ")} · {s.source_domain} ({s.source_tier}) · relevance {s.relevance_score}
                 </div>
               </div>
               <div className="flex items-center gap-2">

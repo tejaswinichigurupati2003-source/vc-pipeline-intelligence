@@ -55,13 +55,13 @@ export default async function WorkspaceVc({ params }: { params: Promise<{ id: st
   }
   for (const m of meetings ?? []) {
     items.push({ key: `m${m.id}`, at: new Date(m.start_at).getTime(), node: (
-      <div className="flex flex-wrap items-center gap-2"><Badge kind="private">Calendar · private</Badge><span className="font-medium">{m.title}</span><span className="text-xs text-slate-500">{fmtDateTime(m.start_at)}</span><Link href={`/workspace/meetings/${m.id}`} className="text-xs">Brief</Link></div>) });
+      <div className="flex flex-wrap items-center gap-2"><Badge kind="private">Calendar · private</Badge><span className="font-medium">{m.title}</span><span className="text-xs text-slate-500">{fmtDateTime(m.start_at)}</span><Link href={`/meetings/${m.id}`} className="text-xs">Brief</Link></div>) });
   }
   items.sort((a, b) => b.at - a.at);
 
   return (
     <main className="max-w-4xl">
-      <InvestorHero vc={vc} backHref="/workspace/pipeline" backLabel="All investors" />
+      <InvestorHero vc={vc} backHref="/investors" backLabel="All investors" />
 
       <section className="card mb-6 p-5">
         <h2 className="mb-3">Your private notes</h2>

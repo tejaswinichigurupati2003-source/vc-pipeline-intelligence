@@ -65,7 +65,7 @@ export default async function Timeline() {
             <li key={m.id} className={`card-sm p-3 text-sm ${m.included ? "" : "opacity-50"}`}>
               <div className="flex flex-wrap items-center gap-2"><Badge kind="private">Calendar</Badge><b>{m.title}</b> with {name.get(m.vc_id) ?? "?"} · {fmtDateTime(m.start_at)}</div>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <Link href={`/workspace/meetings/${m.id}`} className="text-xs">Brief & follow-up</Link>
+                <Link href={`/meetings/${m.id}`} className="text-xs">Brief & follow-up</Link>
                 <ApiButton url="/api/workspace" body={{ entity: "meeting", op: "update", id: m.id, values: { included: !m.included } }} label={m.included ? "Exclude this event" : "Include again"} tone="quiet" />
                 <ApiButton url="/api/workspace" body={{ entity: "meeting", op: "delete", id: m.id }} label="Delete" tone="danger" confirm="Delete this meeting record?" />
               </div>
@@ -88,7 +88,7 @@ export default async function Timeline() {
             <li key={e.id} className="card-sm p-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
                 {e.provenance === "user" ? <Badge kind="note">Your note</Badge> : <Badge kind="private">{e.provenance === "gmail" ? "Gmail (selected label)" : "Calendar"}</Badge>}
-                <Link href={`/workspace/vc/${e.vc_id}`}>{name.get(e.vc_id)}</Link>
+                <Link href={`/investors/${e.vc_id}`}>{name.get(e.vc_id)}</Link>
                 <span className="text-xs text-slate-500">{fmtDateTime(e.occurred_at)}</span>
                 {e.state && <Badge kind={e.state_confidence === "user_confirmed" ? "confirmed" : "inferred"}>{STATE_LABEL[e.state as keyof typeof STATE_LABEL]}{e.state_confidence === "user_confirmed" ? "" : " (inferred)"}</Badge>}
               </div>

@@ -118,9 +118,9 @@ export function ApiButton(props: { url: string; body?: unknown; method?: string;
 
 export function Badge({ kind, children }: { kind: "public" | "private" | "note" | "verified" | "inferred" | "confirmed" | "warn" | "neutral"; children: React.ReactNode }) {
   const c: Record<string, string> = {
-    public: "bg-sky-50 text-sky-700 ring-sky-200", private: "bg-violet-50 text-violet-700 ring-violet-200", note: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-    verified: "bg-emerald-50 text-emerald-700 ring-emerald-200", inferred: "bg-amber-50 text-amber-800 ring-amber-200", confirmed: "bg-indigo-50 text-indigo-700 ring-indigo-200",
-    warn: "bg-rose-50 text-rose-700 ring-rose-200", neutral: "bg-slate-100 text-slate-600 ring-slate-200",
+    public: "bg-sky-50 text-sky-700 border-sky-200", private: "bg-violet-50 text-violet-700 border-violet-200", note: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    verified: "bg-emerald-50 text-emerald-700 border-emerald-200", inferred: "bg-amber-50 text-amber-800 border-amber-200", confirmed: "bg-indigo-50 text-indigo-700 border-indigo-200",
+    warn: "bg-rose-50 text-rose-700 border-rose-200", neutral: "bg-slate-100 text-slate-600 border-slate-200",
   };
-  return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[0.7rem] font-bold ring-1 ring-inset ${c[kind]}`}>{children}</span>;
+  return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[0.7rem] font-bold border ${c[kind]}`}>{children}</span>;
 }

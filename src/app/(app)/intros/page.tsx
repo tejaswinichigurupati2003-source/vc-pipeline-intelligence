@@ -48,7 +48,7 @@ export default async function Intros() {
           return (
             <li key={v.id} className="card p-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
-                <Link href={`/workspace/vc/${v.id}`} className="font-medium">{v.firm_name}</Link>
+                <Link href={`/investors/${v.id}`} className="font-medium">{v.firm_name}</Link>
                 <Badge kind="neutral">possible introduction path</Badge>
                 {p.actionable ? <Badge kind="confirmed">Confirmed &amp; actionable</Badge> : <Badge kind="inferred">Needs your confirmation ({p.needsConfirmation.length})</Badge>}
                 <span className="text-xs text-slate-500">confidence {p.confidence} · {p.hops} hop{p.hops > 1 ? "s" : ""}</span>

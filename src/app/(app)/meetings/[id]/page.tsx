@@ -18,7 +18,7 @@ export default async function MeetingBrief({ params }: { params: Promise<{ id: s
 
   return (
     <main className="max-w-3xl">
-      <Link href="/workspace/timeline" className="text-sm">&larr; Timeline</Link>
+      <Link href="/conversations" className="text-sm">&larr; Timeline</Link>
       <h1 className="mt-2 text-2xl font-bold">{brief.heading}</h1>
       <p className="text-sm text-slate-500">{fmtDateTime(brief.when)}</p>
 

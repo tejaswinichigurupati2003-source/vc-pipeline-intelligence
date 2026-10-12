@@ -1,5 +1,5 @@
-import { ApiForm } from "@/components/ui";
 import PageHeader from "@/components/shell/PageHeader";
+import SettingsForm from "@/components/SettingsForm";
 import { FIT_ASSUMPTIONS, fitScore } from "@/lib/insights/fit";
 import { DEFAULT_TARGET, ROUND_ASSUMPTIONS, roundHealth } from "@/lib/insights/round-health";
 import { STATUS_LABEL } from "@/lib/view/format";
@@ -37,13 +37,15 @@ export default async function Round() {
       <section className="mb-6 card p-4">
         <h2 className="mb-2 font-semibold">Gaps against your targets</h2>
         {!h.gaps.length ? <p className="text-sm">Targets met.</p> : <ul className="list-disc pl-5 text-sm">{h.gaps.map((g, i) => <li key={i}>{g}</li>)}</ul>}
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <ApiForm url="/api/workspace" method="PUT" fields={[{ name: "value", label: "Investors to contact (target)", type: "number", defaultValue: String(target.investorsToContact), required: true }]} extra={{ key: "round_target_investors" }} submit="Save" />
-          <ApiForm url="/api/workspace" method="PUT" fields={[{ name: "value", label: "Live conversations needed (target)", type: "number", defaultValue: String(target.conversationsNeeded), required: true }]} extra={{ key: "round_target_conversations" }} submit="Save" />
+        <div className="mt-5 border-t border-slate-200 pt-4">
+          <SettingsForm columns={2} submit="Save targets" fields={[
+            { key: "round_target_investors", label: "Investors to contact (target)", value: String(target.investorsToContact), type: "number" },
+            { key: "round_target_conversations", label: "Live conversations needed (target)", value: String(target.conversationsNeeded), type: "number" },
+          ]} />
         </div>
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
+      <section className="border border-slate-300 bg-slate-50 p-4 text-sm">
         <h2 className="mb-2 font-semibold">Assumptions</h2>
         <ul className="list-disc space-y-1 pl-5 text-slate-600">{[...ROUND_ASSUMPTIONS, ...FIT_ASSUMPTIONS].map((a, i) => <li key={i}>{a}</li>)}</ul>
       </section>

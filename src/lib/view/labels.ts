@@ -6,13 +6,12 @@
 export type Tone = "go" | "caution" | "info" | "muted" | "alert";
 
 export const TONE_CLASS: Record<Tone, { chip: string; dot: string; bar: string }> = {
-  go: { chip: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500", bar: "bg-emerald-500" },
-  caution: { chip: "bg-amber-50 text-amber-800 ring-amber-200", dot: "bg-amber-500", bar: "bg-amber-500" },
-  info: { chip: "bg-indigo-50 text-indigo-700 ring-indigo-200", dot: "bg-indigo-500", bar: "bg-indigo-500" },
-  muted: { chip: "bg-slate-100 text-slate-600 ring-slate-200", dot: "bg-slate-400", bar: "bg-slate-300" },
-  alert: { chip: "bg-rose-50 text-rose-700 ring-rose-200", dot: "bg-rose-500", bar: "bg-rose-500" },
+  go: { chip: "border border-emerald-300 bg-emerald-50 text-emerald-800", dot: "bg-emerald-600", bar: "bg-emerald-600" },
+  caution: { chip: "border border-amber-300 bg-amber-50 text-amber-900", dot: "bg-amber-500", bar: "bg-amber-500" },
+  info: { chip: "border border-indigo-300 bg-indigo-50 text-indigo-800", dot: "bg-indigo-600", bar: "bg-indigo-600" },
+  muted: { chip: "border border-slate-300 bg-slate-100 text-slate-600", dot: "bg-slate-400", bar: "bg-slate-300" },
+  alert: { chip: "border border-rose-300 bg-rose-50 text-rose-800", dot: "bg-rose-600", bar: "bg-rose-600" },
 };
-
 export const STAGES = [
   { key: "yet_to_reach_out", title: "To contact", hint: "Not contacted yet", tone: "info" as Tone },
   { key: "waiting_for_response", title: "Awaiting reply", hint: "You've reached out", tone: "caution" as Tone },
@@ -57,13 +56,18 @@ export function initials(name: string): string {
   return ((parts[0]?.[0] ?? "?") + (parts.length > 1 ? parts[1][0] : "")).toUpperCase();
 }
 
-/** Stable pastel hue per name so each firm has a recognisable avatar. */
-export function avatarStyle(name: string): { background: string; color: string } {
-  let h = 0;
-  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) % 360;
-  return { background: `hsl(${h} 70% 93%)`, color: `hsl(${h} 55% 32%)` };
-}
+const AVATARS: [string, string][] = [
+  ["#f4e2df", "#62222b"], ["#f3e7d6", "#6b4a1b"], ["#e9e4d3", "#4c5326"], ["#e3e8e4", "#2f5a47"],
+  ["#eadfe6", "#5c2c4f"], ["#e4e6ec", "#34425f"], ["#f1e3d8", "#7a3e1b"], ["#eee3e3", "#5a2b2b"],
+];
 
+/** Stable flat swatch per name, drawn from a warm palette so avatars sit well on the cherry-brown theme. */
+export function avatarStyle(name: string): { background: string; color: string; border: string } {
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const [bg, fg] = AVATARS[h % AVATARS.length];
+  return { background: bg, color: fg, border: `1px solid ${fg}33` };
+}
 export function timeAgo(iso: string | null | undefined, now = new Date()): string {
   if (!iso) return "never";
   const s = (now.getTime() - new Date(iso).getTime()) / 1000;
