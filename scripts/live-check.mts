@@ -87,8 +87,14 @@ try {
   await api("/api/workspace", { entity: "settings-not-real", op: "insert", values: {} });
   const d = await api("/api/drafts", { vc_id: vc.id, create: false });
   check("draft preview uses approved claim only", d.status === 200 && d.j.draft.body.includes("LIVE CHECK approved claim") && !d.j.draft.body.includes("UNAPPROVED"), d.j.error ?? "");
-  const sent = await api("/api/drafts", { vc_id: vc.id, create: true });
-  check("creating a Gmail draft without a connected Gmail fails cleanly (and cannot send)", sent.status === 500 && /not connected/.test(sent.j.error ?? ""), sent.j.error ?? "");
+  // Never create a real draft in a connected mailbox: only exercise this path when Gmail is NOT connected.
+  const gmailRow = (await db.from("integration_accounts").select("provider").eq("provider", "gmail")).data ?? [];
+  if (gmailRow.length === 0) {
+    const sent = await api("/api/drafts", { vc_id: vc.id, create: true });
+    check("creating a Gmail draft without a connected Gmail fails cleanly (and cannot send)", sent.status === 500 && /not connected/.test(sent.j.error ?? ""), sent.j.error ?? "");
+  } else {
+    check("Gmail is connected: draft creation skipped so no real draft is created", true);
+  }
 
   // 6. intros: contacts csv -> path to the test VC
   const ic = await api("/api/intros", { action: "contacts_csv", csv: "name,email,company,relationship,confidence,vc_firm\nLive Check Partner,partner@zzcheck.example,ZZ Live Check VC,knows,0.9,ZZ Live Check VC\n" });
