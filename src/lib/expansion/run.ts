@@ -13,6 +13,7 @@ import { buildExpansionQueries } from "./queries";
 import { type AcceptedSuggestion, type Evidence, mergeSuggestions, validateInvestor } from "./validate";
 
 const MAX_PAGES = 18;
+const MAX_HEADLINES = 6;
 const PAGES_PER_CALL = 6;
 const MAX_AGE_DAYS = 120;
 const RUN_LOCK_MS = 6 * 60_000;
@@ -57,9 +58,11 @@ export async function runExpansion(trigger: "scheduled" | "manual", now = new Da
       if (!isNaN(t) && (now.getTime() - t) / 86_400_000 > MAX_AGE_DAYS) continue;
       byUrl.set(c.canonicalUrl, c);
     }
-    const cands = [...byUrl.values()]
-      .sort((a, b) => (new Date(b.providerDate ?? 0).getTime() || 0) - (new Date(a.providerDate ?? 0).getTime() || 0))
-      .slice(0, MAX_PAGES);
+    // News results are headline-only (their links are redirects), so they would crowd out readable pages if ranked by date alone.
+    const newest = (list: Omit<Candidate, "id">[]) => [...list].sort((x, y) => (new Date(y.providerDate ?? 0).getTime() || 0) - (new Date(x.providerDate ?? 0).getTime() || 0));
+    const all = [...byUrl.values()];
+    const readable = newest(all.filter((c) => c.provider !== "google_news_rss")).slice(0, MAX_PAGES - MAX_HEADLINES);
+    const cands = [...readable, ...newest(all.filter((c) => c.provider === "google_news_rss")).slice(0, MAX_PAGES - readable.length)];
     out.candidates = cands.length;
 
     const limit = pLimit(6);
