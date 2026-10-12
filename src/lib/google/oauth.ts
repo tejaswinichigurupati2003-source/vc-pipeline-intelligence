@@ -103,9 +103,9 @@ export async function getAccount(provider: string): Promise<AccountRow | null> {
 }
 
 /** Revoke at Google (best effort) and delete the stored token. Imported data stays until the founder deletes it. */
-export async function disconnect(provider: GoogleProvider | "hubspot") {
+export async function disconnect(provider: GoogleProvider) {
   const account = await getAccount(provider);
-  if (account?.token_enc && provider !== "hubspot") {
+  if (account?.token_enc) {
     try {
       const { refresh_token } = JSON.parse(decrypt(account.token_enc));
       await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(refresh_token)}`, { method: "POST", signal: AbortSignal.timeout(8000) });

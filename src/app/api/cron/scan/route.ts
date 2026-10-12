@@ -3,7 +3,7 @@ import { isCron } from "@/lib/auth";
 import { chainBatch, startRun } from "@/lib/scan/start";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function GET(req: Request) {
   if (!isCron(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });

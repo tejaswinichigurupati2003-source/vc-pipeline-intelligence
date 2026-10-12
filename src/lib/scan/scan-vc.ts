@@ -1,3 +1,4 @@
+import pLimit from "p-limit";
 import { config } from "@/lib/config";
 import { applyPipelineSignalUpdate } from "@/lib/db/pipeline-writer";
 import { insertCandidates, insertSignals, loadSignals, type CandidateLog } from "@/lib/db/store";
@@ -54,8 +55,7 @@ export async function scanVc(vc: VcProfile, ctx: RunContext): Promise<VcScanResu
 
   const shortlistSize = () => dedupeAndRank(raw, vc, 99).filter((c) => prefilter(c, vc, now, knownCanonical).keep).length;
 
-  for (const q of planned) {
-    if (q.id === "Q3" && shortlistSize() >= 3) continue; // spec 7.3: skip if Q1+Q2 already enough
+  const runQuery = async (q: (typeof planned)[number]) => {
     queries++;
     try {
       raw.push(...(q.provider === "langsearch" ? await langSearch(q.query) : await googleNews(q.query)));
@@ -63,9 +63,12 @@ export async function scanVc(vc: VcProfile, ctx: RunContext): Promise<VcScanResu
     } catch (e) {
       errors.push(`${q.id}: ${(e as Error).message}`);
     }
-  }
-  const feed = await monitorFeeds(vc.id);
+  };
+  // Independent searches and the feed check run together; the extra people-focused query only runs if still needed.
+  const [, feed] = await Promise.all([Promise.all(planned.filter((q) => q.id !== "Q3").map(runQuery)), monitorFeeds(vc.id)]);
+  const q3 = planned.find((q) => q.id === "Q3");
   raw.push(...feed.items);
+  if (q3 && shortlistSize() < 3) await runQuery(q3); // spec 7.3: skip if the first queries already gave enough
   errors.push(...feed.errors);
 
   if (queries > 0 && succeeded === 0 && feed.items.length === 0) {
@@ -87,13 +90,13 @@ export async function scanVc(vc: VcProfile, ctx: RunContext): Promise<VcScanResu
 
   // ---- Fetch pages -------------------------------------------------------------------------
   const pages = new Map<string, { page: FetchedPage | null; basis: EvidenceBasis; text: string }>();
-  for (const c of shortlist) {
+  const fetchOne = async (c: Candidate) => {
     const headline = `${c.title}. ${c.snippet}`.trim();
     const redirectOnly = c.sourceDomain === "news.google.com" || c.url.includes("news.google.com/rss/articles");
     const canFallback = c.provider === "google_news_rss" || c.isFeedItem;
     if (redirectOnly) {
       pages.set(c.id, { page: null, basis: "headline_only", text: headline });
-      continue;
+      return;
     }
     try {
       const page = await fetchPage(c.url);
@@ -105,7 +108,9 @@ export async function scanVc(vc: VcProfile, ctx: RunContext): Promise<VcScanResu
         logs.push(log(c, "fetch_failed", (e as Error).message));
       }
     }
-  }
+  };
+  const pageLimit = pLimit(3);
+  await Promise.all(shortlist.map((c) => pageLimit(() => fetchOne(c))));
   const usable = shortlist.filter((c) => pages.get(c.id)!.text !== "");
 
   // ---- Classify (one Gemini call) or rules-only --------------------------------------------

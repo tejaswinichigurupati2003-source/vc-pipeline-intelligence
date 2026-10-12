@@ -1,6 +1,5 @@
-import pLimit from "p-limit";
 import { config } from "@/lib/config";
-import { bumpCounters, claimVcs, finalizeIfDone, finishItem, getRun, remainingCount, runIsDegraded } from "@/lib/db/store";
+import { bumpCounters, makeClaimer, finalizeIfDone, finishItem, getRun, remainingCount, runIsDegraded } from "@/lib/db/store";
 import type { VcProfile } from "@/lib/types";
 import { scanVc, type RunContext } from "./scan-vc";
 
@@ -18,6 +17,8 @@ export interface BatchOutcome {
 export async function runBatch(runId: string): Promise<BatchOutcome> {
   const started = Date.now();
   const deadline = started + (config.maxDurationSec - 15) * 1000;
+  // Stop claiming new investors while there is still room for a whole claimed batch to finish (and the run to be finalised).
+  const reserveMs = Math.min(90_000, (deadline - started) * 0.4);
   const run = await getRun(runId);
   if (!run) throw new Error("run not found");
   if (run.status !== "running") return { processed: 0, remaining: 0, done: true, status: run.status };
@@ -34,11 +35,14 @@ export async function runBatch(runId: string): Promise<BatchOutcome> {
   };
 
   let processed = 0;
-  const limit = pLimit(config.maxParallelVcs);
 
   const processOne = async (vc: VcProfile) => {
     try {
-      const r = await scanVc(vc, ctx);
+      // One slow site must never hold up a whole batch: give each investor a hard cap.
+      const r = await Promise.race([
+        scanVc(vc, ctx),
+        new Promise<never>((_, rej) => setTimeout(() => rej(new Error("scan timed out after 80s")), 80_000)),
+      ]);
       await finishItem(runId, vc.id, {
         status: r.status,
         scan_mode: r.scanMode,
@@ -60,11 +64,17 @@ export async function runBatch(runId: string): Promise<BatchOutcome> {
     processed++;
   };
 
-  while (Date.now() < deadline - 20_000) {
-    const claimed = await claimVcs(runId, config.batchSize);
-    if (!claimed.length) break;
-    await Promise.all(claimed.map((vc) => limit(() => processOne(vc))));
-  }
+  // Worker pool: a fixed number of investors are in flight at all times, and a finished worker immediately takes the next
+  // one (no waiting for the slowest of a wave). Workers stop taking new investors when the time budget is nearly spent.
+  const nextVc = await makeClaimer(runId);
+  const worker = async () => {
+    while (Date.now() < deadline - reserveMs) {
+      const vc = await nextVc();
+      if (!vc) return;
+      await processOne(vc);
+    }
+  };
+  await Promise.all(Array.from({ length: config.maxParallelVcs }, worker));
 
   const final = await finalizeIfDone(runId);
   const remaining = await remainingCount(runId);

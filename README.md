@@ -98,7 +98,7 @@ There is one app (no separate public/shared view). Sign in with your `ADMIN_TOKE
 | **Intros** | Possible introduction paths from *your* contacts only; edges carry provenance, confidence, last-seen, can-act flag; unconfirmed edges are capped and never actionable. |
 | **Materials** | Company claims/documents (only **approved** items reach drafts and briefs), investor diligence requests. |
 | **Round health** | Coverage, stage distribution, gaps vs your targets, with assumptions listed. |
-| **Integrations** | Gmail, Calendar, HubSpot: scopes, account, last sync, errors, choose scope, disconnect, delete imported data. |
+| **Integrations** | Gmail, Calendar: scopes, account, last sync, errors, choose scope, disconnect, delete imported data. |
 | **Import / export** | CSV import with column mapping, dry run, duplicate detection (name, email, profile URL, firm), blank-fill, conflict resolution, undo, CSV export of pipeline and evidence. |
 
 ### Setup for the workspace
@@ -111,7 +111,6 @@ Set `INTEGRATION_ENC_KEY` (and `APP_URL`) in `.env.local`/Vercel. Gmail and Cale
 - **Import never overwrites.** Merge rules: match on investor+firm, then email, then profile URL; fill blank fields only; differing values become conflicts you resolve; identical values do nothing. A re-import is a no-op. All writes to `vc_pipeline` go through allow-listed Postgres functions (`005_user_rpcs.sql`) that cannot touch the four signal columns. The scanner never imports that code (enforced by tests).
 - **Gmail:** least privilege (`gmail.metadata` + `gmail.compose`). Reads headers, labels and snippets of the labels you pick, never full bodies. Creates **drafts only**; there is no send code or send scope anywhere (a test fails the build if one appears). Relationship states (`interested`, `meeting_requested`, `deck_requested`, `awaiting_founder`, `waiting_for_investor`, `pass`, `reconnect_later`) come from transparent rules and are marked *inferred* until you confirm them. Dated commitments are *proposed* for you to confirm. No email content is sent to Gemini.
 - **Calendar:** read-only, selected calendars only, incremental sync tokens, and only events whose guests match a tracked investor are stored; you can exclude or delete any event.
-- **HubSpot** (chosen as the one CRM; others deferred until customers ask): private-app token, encrypted at rest. A field-ownership matrix (`src/lib/crm/ownership.ts`) decides the owner of each field; companies are pulled through the same import pipeline (blank-fill + conflicts), and only founder-approved derived fields are pushed, one-way, to `vcpi_*` custom properties.
 - **Contacts and intros:** user-supplied contact CSV and optional, off-by-default meeting-derived edges (confidence 0.3, unconfirmed, not actionable). Language is "possible introduction path" until you confirm.
 - **Drafts and briefs** are deterministic templates over verified signals and *approved* claims: no model-written claims.
 - OAuth `state` is signed, expiring and bound to a browser nonce cookie; tokens are AES-256-GCM encrypted and never returned to the browser.
@@ -125,14 +124,13 @@ Set `INTEGRATION_ENC_KEY` (and `APP_URL`) in `.env.local`/Vercel. Gmail and Cale
 | 22 | Export | `src/lib/export.ts`, `src/app/api/export/route.ts` |
 | 23 | Google OAuth + Gmail + Calendar | `src/lib/google/{oauth,gmail,calendar}.ts`, `src/app/api/integrations/google/**` |
 | 24 | Relationship rules (state, commitments, matching) | `src/lib/relationships/*` |
-| 25 | HubSpot connector + ownership matrix | `src/lib/crm/{hubspot,ownership}.ts`, `src/app/api/integrations/hubspot/route.ts` |
 | 26 | Warm-intro graph and path finder | `src/lib/intros/{paths,service}.ts`, `src/app/api/intros/route.ts` |
 | 27 | Today, fit, round health, briefs, drafts | `src/lib/insights/*`, `src/app/api/drafts/route.ts`, `src/app/api/meetings/[id]/route.ts` |
 | 28 | Workspace mutations (allow-listed) | `src/lib/workspace/entities.ts`, `src/app/api/workspace/route.ts` |
 | 29 | Workspace UI | `src/app/workspace/**`, `src/components/*` |
 
 ### What is and is not verified
-Unit-tested offline: import planner, classifier, commitments, matching, MIME building, encryption/OAuth state, auth/CSRF, allow-lists, ownership guard, today/brief/draft/round logic, intro paths, and the write-boundary and never-send guards. Not exercised against live third-party accounts (needs your credentials): Google OAuth/Gmail/Calendar and HubSpot calls. They follow the documented APIs, but expect to fix small field-level surprises on first connection.
+Unit-tested offline: import planner, classifier, commitments, matching, MIME building, encryption/OAuth state, auth/CSRF, allow-lists, today/brief/draft/round logic, intro paths, and the write-boundary and never-send guards. Not exercised against live third-party accounts (needs your credentials): Google OAuth/Gmail/Calendar and  calls. They follow the documented APIs, but expect to fix small field-level surprises on first connection.
 ## Interface
 
 One app called **Raise**: a left sidebar, a top bar (round progress, search, last-scan status, Refresh) and a stage board of investors.
@@ -147,7 +145,7 @@ One app called **Raise**: a left sidebar, a top bar (round progress, search, las
 | `/conversations` | **Conversations** | Selected email threads, meetings, commitments and your notes. |
 | `/intros` | **Warm intros** | Possible introduction paths from your own contacts. |
 | `/data-room` | **Data room** | Company profile, approved claims and documents, investor diligence requests. |
-| `/integrations`, `/import` | **Integrations**, **Import & export** | Gmail, Calendar, HubSpot; CSV import with dry run, conflicts and undo. |
+| `/integrations`, `/import` | **Integrations**, **Import & export** | Gmail, Calendar; CSV import with dry run, conflicts and undo. |
 
 ### Design
 Flat and hard-edged: zero border radius, 1px crisp borders, no soft shadows (hover uses a hard-offset block shadow), a faint blueprint grid on the page, and cherry-brown gradients with a diagonal hatch on key surfaces. Headlines use **Panchang**, data and paragraphs use **General Sans** (both from Fontshare, loaded with one `<link>` per family because their API drops the second family when two are combined). Tokens live in `tailwind.config.ts` (palette, radius, shadow) and `src/app/globals.css` (type scale, form controls, `.card`, `.btn`, `.grad-cherry`, `.blueprint`).

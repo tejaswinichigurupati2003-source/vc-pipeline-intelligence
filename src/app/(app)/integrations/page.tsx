@@ -3,9 +3,9 @@ import PageHeader from "@/components/shell/PageHeader";
 import ScopePicker from "@/components/ScopePicker";
 import SyncButton from "@/components/SyncButton";
 import { db } from "@/lib/db/client";
-import { PUSHABLE } from "@/lib/crm/ownership";
 import { googleConfigured } from "@/lib/google/oauth";
 import { fmtDateTime } from "@/lib/view/format";
+import { friendlyIntegrationError } from "@/lib/view/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -29,22 +29,25 @@ export default async function Integrations({ searchParams }: { searchParams: Pro
   const { data } = await db().from("integration_accounts").select("provider, account_label, scopes, status, config, last_sync_at, last_error, connected_at");
   const acct = (p: string) => (data ?? []).find((a) => a.provider === p);
   const ready = googleConfigured();
-  const gm = acct("gmail"), cal = acct("calendar"), hs = acct("hubspot");
+  const gm = acct("gmail"), cal = acct("calendar");
 
-  const Card = ({ title, blurb, a, children, provider }: { title: string; blurb: string; a: ReturnType<typeof acct>; children: React.ReactNode; provider: "gmail" | "calendar" | "hubspot" }) => (
-    <section className="card flex flex-col">
+  const Card = ({ title, blurb, a, children, provider }: { title: string; blurb: string; a: ReturnType<typeof acct>; children: React.ReactNode; provider: "gmail" | "calendar" }) => (
+    <section className="card flex min-w-0 flex-col">
       <header className="flex items-center justify-between gap-2 border-b border-slate-900 bg-slate-50 px-4 py-3">
         <h2>{title}</h2>
         {a ? <Badge kind={a.status === "connected" ? "verified" : "warn"}>{a.status === "connected" ? "Connected" : "Needs attention"}</Badge> : <Badge kind="neutral">Not connected</Badge>}
       </header>
-      <div className="flex-1 p-4">
+      <div className="min-w-0 flex-1 p-4">
         <p className="text-[0.9rem] leading-relaxed text-slate-600">{blurb}</p>
         {a && (
-          <dl className="mt-4 grid grid-cols-[7rem_1fr] gap-y-1.5 text-[0.85rem]">
-            <dt>Account</dt><dd className="text-slate-800">{a.account_label ?? "—"}</dd>
-            {provider !== "hubspot" && <><dt>Access</dt><dd className="text-slate-800">{permissions(a.scopes as string[]).join(" · ") || "—"}</dd></>}
-            <dt>Last sync</dt><dd className="text-slate-800">{a.last_sync_at ? fmtDateTime(a.last_sync_at) : "Not yet"}</dd>
-            {a.last_error && <><dt className="text-rose-700">Issue</dt><dd className="text-rose-700">{a.last_error}</dd></>}
+          <dl className="mt-4 grid grid-cols-[5.5rem_minmax(0,1fr)] gap-x-3 gap-y-2 text-[0.85rem]">
+            <dt>Account</dt><dd className="min-w-0 break-words text-slate-800">{a.account_label ?? "—"}</dd>
+            <dt>Access</dt><dd className="min-w-0 break-words text-slate-800">{permissions(a.scopes as string[]).map((p) => <span key={p} className="block">{p}</span>)}</dd>
+            <dt>Last sync</dt><dd className="min-w-0 break-words text-slate-800">{a.last_sync_at ? fmtDateTime(a.last_sync_at) : "Not yet"}</dd>
+            {(() => {
+              const err = friendlyIntegrationError(a.last_error, provider);
+              return err ? (<><dt className="text-rose-700">Issue</dt><dd className="min-w-0 text-rose-700">{err.text}{err.fixUrl && <> <a href={err.fixUrl} target="_blank" rel="noopener noreferrer" className="font-semibold underline">{err.fixLabel}</a></>}</dd></>) : null;
+            })()}
           </dl>
         )}
         {children}
@@ -64,12 +67,12 @@ export default async function Integrations({ searchParams }: { searchParams: Pro
       {sp.connected && <p className="mb-4 border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">{sp.connected === "gmail" ? "Gmail" : "Calendar"} connected. Choose what to include below, then sync.</p>}
       {sp.error && <p className="mb-4 border border-rose-300 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-900">We couldn&apos;t complete the connection. Please try again.</p>}
 
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-2">
         <Card provider="gmail" title="Gmail" a={gm} blurb="See which investors have replied, spot requests for your deck or a meeting, and save drafts for you to review and send. Only the labels you pick are read.">
           {!gm ? <ConnectLink provider="gmail" label="Connect Gmail" ready={ready} /> : (
             <div className="mt-4 space-y-3">
               <ScopePicker provider="gmail" selected={(gm.config as { labelIds?: string[] }).labelIds ?? []} />
-              <SyncButton url="/api/integrations/google" body={{ provider: "gmail" }} label="Sync now" />
+              <SyncButton url="/api/integrations/google" body={{ provider: "gmail" }} label="Sync now" provider="gmail" disabled={!(((gm.config as { labelIds?: string[] }).labelIds ?? []).length)} hint="Choose at least one label first." />
             </div>
           )}
         </Card>
@@ -78,27 +81,8 @@ export default async function Integrations({ searchParams }: { searchParams: Pro
           {!cal ? <ConnectLink provider="calendar" label="Connect Calendar" ready={ready} /> : (
             <div className="mt-4 space-y-3">
               <ScopePicker provider="calendar" selected={(cal.config as { calendarIds?: string[] }).calendarIds ?? []} />
-              <SyncButton url="/api/integrations/google" body={{ provider: "calendar" }} label="Sync now" />
-              <ApiForm url="/api/integrations/google" method="PUT" className="flex items-center gap-2 text-[0.85rem]" fields={[{ name: "deriveEdges", label: "Suggest introductions from shared meetings", type: "checkbox", defaultValue: String(!!(cal.config as { deriveEdges?: boolean }).deriveEdges) }]} extra={{ provider: "calendar" }} submit="Save" />
-            </div>
-          )}
-        </Card>
-
-        <Card provider="hubspot" title="HubSpot" a={hs} blurb="Bring your HubSpot companies into your investor list. Company names and websites come from HubSpot; your notes, stages and scores stay here.">
-          {!hs ? (
-            <ApiForm url="/api/integrations/hubspot" className="mt-4 space-y-2" fields={[{ name: "token", label: "HubSpot access token", required: true }]} extra={{ action: "connect" }} submit="Connect HubSpot" />
-          ) : (
-            <div className="mt-4 space-y-4">
-              <div className="flex flex-wrap gap-2">
-                <SyncButton url="/api/integrations/hubspot" body={{ action: "preview" }} label="Preview import" />
-                <SyncButton url="/api/integrations/hubspot" body={{ action: "import" }} label="Import companies" />
-              </div>
-              <div className="border-t border-slate-200 pt-3">
-                <div className="eyebrow mb-2">Send back to HubSpot</div>
-                <ApiForm url="/api/integrations/hubspot" className="space-y-1.5 text-[0.85rem]" submit="Save" collectChecked="fields" extraTop={{ action: "fields" }}
-                  fields={Object.entries(PUSHABLE).map(([k, p]) => ({ name: k, label: p.label, type: "checkbox" as const, defaultValue: String(((hs.config as { pushFields?: string[] }).pushFields ?? []).includes(k)) }))} />
-                <div className="mt-3"><SyncButton url="/api/integrations/hubspot" body={{ action: "push" }} label="Send now" /></div>
-              </div>
+              <SyncButton url="/api/integrations/google" body={{ provider: "calendar" }} label="Sync now" provider="calendar" disabled={!(((cal.config as { calendarIds?: string[] }).calendarIds ?? []).length)} hint="Choose at least one calendar first." />
+              <ApiForm url="/api/integrations/google" method="PUT" className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[0.85rem]" fields={[{ name: "deriveEdges", label: "Suggest introductions from shared meetings", type: "checkbox", defaultValue: String(!!(cal.config as { deriveEdges?: boolean }).deriveEdges) }]} extra={{ provider: "calendar" }} submit="Save" />
             </div>
           )}
         </Card>

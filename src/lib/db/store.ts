@@ -110,48 +110,52 @@ export async function bumpCounters(
   if (error) throw new Error(`bumpCounters: ${error.message}`);
 }
 
-const STALE_ITEM_MS = 4 * 60_000;
+const STALE_ITEM_MS = 100_000;
 
 /**
  * Claim up to `limit` VCs for this run. The unique (run_id, vc_id) constraint guarantees two concurrent
  * batches never take the same VC. Items stuck in `running` for >4 min (crashed batch) are re-taken.
  * Order: oldest last successful scan first.
  */
-export async function claimVcs(runId: string, limit: number): Promise<VcProfile[]> {
-  const profiles = await listProfiles();
-  const items = unwrap(
-    await db().from("signal_run_items").select("id, vc_id, status, started_at").eq("run_id", runId),
-    "claimVcs/items",
-  ) as { id: string; vc_id: string; status: string; started_at: string }[];
+/**
+ * A claimer hands out investors one at a time to a pool of parallel workers. It reads profiles, existing items and scan
+ * history ONCE, then each next() only attempts a single insert. The unique (run_id, vc_id) constraint guarantees two
+ * workers (or two concurrent batches) never take the same investor; items stuck in "running" past STALE_ITEM_MS
+ * (an abandoned function) are re-taken. Order: oldest last successful scan first.
+ */
+export async function makeClaimer(runId: string): Promise<() => Promise<VcProfile | null>> {
+  const [profiles, itemsRes, histRes] = await Promise.all([
+    listProfiles(),
+    db().from("signal_run_items").select("id, vc_id, status, started_at").eq("run_id", runId),
+    db().from("signal_run_items").select("vc_id, finished_at").in("status", ["success", "no_verified_signal"]).order("finished_at", { ascending: false }),
+  ]);
+  const items = unwrap(itemsRes, "claimer/items") as { id: string; vc_id: string; status: string; started_at: string }[];
+  const hist = unwrap(histRes, "claimer/history") as { vc_id: string; finished_at: string | null }[];
   const taken = new Map(items.map((i) => [i.vc_id, i]));
-
   const lastOk = new Map<string, string>();
-  const hist = unwrap(
-    await db().from("signal_run_items").select("vc_id, finished_at").in("status", ["success", "no_verified_signal"]).order("finished_at", { ascending: false }),
-    "claimVcs/history",
-  ) as { vc_id: string; finished_at: string | null }[];
   for (const h of hist) if (h.finished_at && !lastOk.has(h.vc_id)) lastOk.set(h.vc_id, h.finished_at);
-
   const order = [...profiles].sort((a, b) => (lastOk.get(a.id) ?? "").localeCompare(lastOk.get(b.id) ?? ""));
-  const claimed: VcProfile[] = [];
 
-  for (const vc of order) {
-    if (claimed.length >= limit) break;
-    const existing = taken.get(vc.id);
-    if (existing) {
-      const stale = existing.status === "running" && Date.now() - new Date(existing.started_at).getTime() > STALE_ITEM_MS;
-      if (!stale) continue;
-      const { data } = await db()
-        .from("signal_run_items").update({ started_at: new Date().toISOString() })
-        .eq("id", existing.id).eq("started_at", existing.started_at).eq("status", "running").select("id");
-      if (data?.length) claimed.push(vc);
-      continue;
+  let idx = 0; // advanced synchronously, so concurrent next() calls never look at the same investor
+  return async () => {
+    while (idx < order.length) {
+      const vc = order[idx++];
+      const existing = taken.get(vc.id);
+      if (existing) {
+        const stale = existing.status === "running" && Date.now() - new Date(existing.started_at).getTime() > STALE_ITEM_MS;
+        if (!stale) continue;
+        const { data } = await db()
+          .from("signal_run_items").update({ started_at: new Date().toISOString() })
+          .eq("id", existing.id).eq("started_at", existing.started_at).eq("status", "running").select("id");
+        if (data?.length) return vc;
+        continue;
+      }
+      const { error } = await db().from("signal_run_items").insert({ run_id: runId, vc_id: vc.id, status: "running" });
+      if (!error) return vc;
+      if (error.code !== "23505") throw new Error(`claimer/insert: ${error.message}`);
     }
-    const { error } = await db().from("signal_run_items").insert({ run_id: runId, vc_id: vc.id, status: "running" });
-    if (!error) claimed.push(vc);
-    else if (error.code !== "23505") throw new Error(`claimVcs/insert: ${error.message}`);
-  }
-  return claimed;
+    return null;
+  };
 }
 
 export async function finishItem(

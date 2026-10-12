@@ -28,7 +28,7 @@ export async function previewImport(csv: string, mapping?: Mapping): Promise<Pre
   return { headers, mapping: m, plan: planImport(rows, m, await loadExisting()), sample: rows.slice(0, 3) };
 }
 
-export async function commitImport(csv: string, mapping: Mapping, filename: string | null, source: "csv" | "hubspot" = "csv") {
+export async function commitImport(csv: string, mapping: Mapping, filename: string | null, source: "csv" = "csv") {
   const rows = parseCsv(csv);
   const plan = planImport(rows, mapping, await loadExisting()); // re-plan against fresh state, never trust a stale preview
   const toInsert = plan.rows.filter((r) => r.action === "insert" && r.data);

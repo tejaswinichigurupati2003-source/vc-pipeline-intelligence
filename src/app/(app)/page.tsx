@@ -93,6 +93,7 @@ export default async function Today() {
                           {a.provenance === "verified" ? "Verified" : a.provenance === "inferred" ? "Needs your OK" : "From your data"}
                         </Badge>
                         {a.sourceUrl && <a href={a.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-semibold"><Icon name="link" className="h-3.5 w-3.5" />Source</a>}
+                        {a.vcId && (type === "reach_out" || type === "follow_up" || type === "respond") && <Link href={`/investors/${a.vcId}#draft`} className="inline-flex items-center gap-1 font-semibold"><Icon name="mail" className="h-3.5 w-3.5" />Open draft</Link>}
                         {a.vcId && states[a.vcId] && <span>{STATE_LABEL[states[a.vcId].state as RelationshipState]} · {timeAgo(states[a.vcId].at)}</span>}
                       </div>
                     </div>

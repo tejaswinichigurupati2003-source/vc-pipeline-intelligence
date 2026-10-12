@@ -5,7 +5,7 @@ import { disconnect } from "@/lib/google/oauth";
 
 export const dynamic = "force-dynamic";
 
-const Body = z.object({ provider: z.enum(["gmail", "calendar", "hubspot"]), deleteData: z.boolean().default(false) });
+const Body = z.object({ provider: z.enum(["gmail", "calendar"]), deleteData: z.boolean().default(false) });
 
 /**
  * Disconnect = revoke access + delete the stored token. With deleteData the data that integration brought in is removed too.
@@ -26,9 +26,6 @@ export const POST = adminRoute(Body, async ({ provider, deleteData }) => {
       removed.calendar_events = count ?? 0;
       await db().from("warm_edges").delete().eq("provenance", "meeting");
       await db().from("warm_nodes").delete().eq("source", "calendar");
-    } else {
-      const { count } = await db().from("crm_links").delete({ count: "exact" }).eq("provider", "hubspot");
-      removed.crm_links = count ?? 0;
     }
   }
   return { ok: true, removed };

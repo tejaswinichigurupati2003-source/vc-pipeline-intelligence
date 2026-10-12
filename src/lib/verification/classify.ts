@@ -1,4 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
+import pLimit from "p-limit";
 import { z } from "zod";
 import { requireEnv } from "@/lib/config";
 import type { VcProfile } from "@/lib/types";
@@ -70,7 +71,12 @@ export function parseClassification(raw: string, validIds: Set<string>): Classif
 
 type Generate = (model: string, system: string, user: string) => Promise<string>;
 
-const defaultGenerate: Generate = async (model, system, user) => {
+// Parallel investors share a small number of in-flight Gemini requests (free-tier friendly).
+const geminiSlots = pLimit(4);
+
+const defaultGenerate: Generate = (model, system, user) => geminiSlots(() => generateOnce(model, system, user));
+
+const generateOnce: Generate = async (model, system, user) => {
   const ai = new GoogleGenAI({ apiKey: requireEnv("GEMINI_API_KEY") });
   const res = await ai.models.generateContent({
     model,
@@ -92,7 +98,9 @@ export async function classifyCandidates(
   cands: PromptCandidate[],
   runDate: Date,
   generate: Generate = defaultGenerate,
+  opts: { sleep?: (ms: number) => Promise<void> } = {},
 ): Promise<{ results: Classification[]; calls: number }> {
+  const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const system = buildSystemInstruction(vc, runDate);
   const user = buildUserMessage(cands);
   const ids = new Set(cands.map((c) => c.id));
@@ -100,26 +108,32 @@ export async function classifyCandidates(
   let calls = 0;
   let lastErr: unknown;
 
-  for (const model of models) {
-    for (let attempt = 0; attempt < 2; attempt++) {
-      const prompt = attempt === 0 ? user : user + "\n\nReturn valid JSON only, matching the schema.";
-      let raw: string;
-      try {
-        calls++;
-        raw = await generate(model, system, prompt);
-      } catch (e) {
-        lastErr = e;
-        const s = statusOf(e);
-        if (s === 429 || (s !== undefined && s >= 500)) break; // next model
-        throw new LlmUnavailable("error", `Gemini error: ${(e as Error).message}`, calls);
-      }
-      try {
-        return { results: parseClassification(raw, ids), calls };
-      } catch (e) {
-        lastErr = e;
-        if (attempt === 1) throw new LlmUnavailable("invalid_json", "Gemini returned invalid JSON twice", calls);
+  // A busy moment (429/5xx) is usually over within seconds: retry a couple of times before reporting Gemini unavailable.
+  for (let round = 0; round < 3; round++) {
+    if (round > 0) await sleep(2500 * round);
+    let transient = false;
+    for (const model of models) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const prompt = attempt === 0 ? user : user + "\n\nReturn valid JSON only, matching the schema.";
+        let raw: string;
+        try {
+          calls++;
+          raw = await generate(model, system, prompt);
+        } catch (e) {
+          lastErr = e;
+          const s = statusOf(e);
+          if (s === 429 || (s !== undefined && s >= 500)) { transient = true; break; } // next model
+          throw new LlmUnavailable("error", `Gemini error: ${(e as Error).message}`, calls);
+        }
+        try {
+          return { results: parseClassification(raw, ids), calls };
+        } catch (e) {
+          lastErr = e;
+          if (attempt === 1) throw new LlmUnavailable("invalid_json", "Gemini returned invalid JSON twice", calls);
+        }
       }
     }
+    if (!transient) break;
   }
   const quota = statusOf(lastErr) === 429;
   throw new LlmUnavailable(quota ? "quota" : "error", `Gemini unavailable: ${(lastErr as Error)?.message ?? "unknown"}`, calls);

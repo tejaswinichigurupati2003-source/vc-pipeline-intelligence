@@ -39,7 +39,9 @@ export const POST = adminRoute(z.object({ provider: Provider }), async ({ provid
   try {
     return provider === "gmail" ? await syncGmail() : await syncCalendar();
   } catch (e) {
-    await db().from("integration_accounts").update({ last_error: (e as Error).message.slice(0, 300) }).eq("provider", provider);
+    if (!/^choose at least one/i.test((e as Error).message)) {
+      await db().from("integration_accounts").update({ last_error: (e as Error).message.slice(0, 300) }).eq("provider", provider);
+    }
     throw e;
   }
 });

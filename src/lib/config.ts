@@ -8,11 +8,11 @@ export const config = {
   maxQueriesPerVc: num(process.env.MAX_QUERIES_PER_VC, 4),
   maxCandidatesPerVc: num(process.env.MAX_CANDIDATES_PER_VC, 6),
   batchSize: num(process.env.BATCH_SIZE, 4),
-  maxParallelVcs: num(process.env.MAX_PARALLEL_VCS, 3),
+  maxParallelVcs: num(process.env.MAX_PARALLEL_VCS, 6),
   requestTimeoutMs: num(process.env.REQUEST_TIMEOUT_MS, 8000),
   cooldownDays: num(process.env.COOLDOWN_DAYS, 14),
   llmMaxCallsPerRun: num(process.env.LLM_MAX_CALLS_PER_RUN, 60),
-  maxDurationSec: 60,
+  maxDurationSec: 300,
   classifierVersion: "v1",
   appVersion: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "dev",
 };

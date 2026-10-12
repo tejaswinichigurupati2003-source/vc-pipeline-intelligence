@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { composeDraft, buildMeetingBrief, followUpChecklist } from "@/lib/insights/brief";
+import { buildMeetingBrief, followUpChecklist } from "@/lib/insights/brief";
+import { composeDraft } from "@/lib/insights/draft";
 import { fitScore } from "@/lib/insights/fit";
 import { roundHealth, DEFAULT_TARGET } from "@/lib/insights/round-health";
 import { buildToday, type TodayInput, type TodayVc } from "@/lib/insights/today";
@@ -84,7 +85,7 @@ describe("fit and round health", () => {
 
 describe("drafts and briefs only use verified/approved content", () => {
   const base = { founderName: "Vikram", companyName: "RouteIQ", oneLiner: "We build freight visibility SaaS.", vc: { investor_name: "Jane Doe", firm_name: "Route Ventures" } };
-  const signal = { evidence_summary: "Route Ventures led a $6M Series A in TruckLens.", source_url: "https://news.example/a", date: "2026-10-08T00:00:00Z" };
+  const signal = { title: "TruckLens round", signal_type: "portfolio_investment", evidence_summary: "Route Ventures led a $6M Series A in TruckLens.", source_url: "https://news.example/a", date: "2026-10-08T00:00:00Z" };
   it("includes approved claims and the linked signal; excludes unapproved ones", () => {
     const out = composeDraft({ ...base, signal, relationship: null, materials: [{ title: "ARR", claim_text: "ARR is $1.2M", approved: true }, { title: "Secret", claim_text: "UNAPPROVED CLAIM", approved: false }] });
     expect(out.body).toContain("ARR is $1.2M");
@@ -96,8 +97,40 @@ describe("drafts and briefs only use verified/approved content", () => {
   it("warns instead of inventing when there is no signal or no approved claims", () => {
     const out = composeDraft({ ...base, signal: null, relationship: null, materials: [] });
     expect(out.warnings.join(" ")).toMatch(/No recent signal/);
-    expect(out.warnings.join(" ")).toMatch(/No approved company claims/);
-    expect(out.body).not.toContain("I noticed");
+    expect(out.warnings.join(" ")).toMatch(/No approved company facts/);
+    expect(out.hook).toBeNull();
+  });
+  it("opens differently for each kind of signal, always quoting the sourced summary and link", () => {
+    const types = { investor_thesis: "read your recent take", portfolio_investment: "saw the recent news", fund_activity: "Congratulations on the recent news", event_appearance: "noticed your appearance", investor_commentary: "enjoyed your recent comments" };
+    for (const [type, phrase] of Object.entries(types)) {
+      const out = composeDraft({ ...base, signal: { ...signal, signal_type: type }, relationship: null, materials: [] });
+      expect(out.body).toContain(phrase);
+      expect(out.body).toContain(signal.evidence_summary);
+      expect(out.body).toContain(signal.source_url);
+    }
+  });
+  it("uses [placeholders] and a single warning when the founder profile is empty", () => {
+    const out = composeDraft({ ...base, founderName: "", companyName: "", oneLiner: "", signal, relationship: null, materials: [] });
+    expect(out.body).toContain("[your name]");
+    expect(out.body).toContain("[your company]");
+    expect(out.body).toContain("[one line on what you build]");
+    expect(out.warnings.filter((w) => /Data room/.test(w) && /one-liner/.test(w))).toHaveLength(1);
+  });
+  it("short style keeps one fact and a one-line ask", () => {
+    const mats = [{ title: "a", claim_text: "Fact one", approved: true }, { title: "b", claim_text: "Fact two", approved: true }];
+    const short = composeDraft({ ...base, signal, relationship: null, materials: mats, style: "short" });
+    expect(short.body).toContain("Fact one");
+    expect(short.body).not.toContain("Fact two");
+    expect(short.body).toContain("Open to a quick call?");
+    const full = composeDraft({ ...base, signal, relationship: null, materials: mats });
+    expect(full.body).toContain("Fact two");
+    expect(short.body.length).toBeLessThan(full.body.length);
+  });
+  it("a requested deck or meeting changes the opening and drops the cold pitch", () => {
+    const deck = composeDraft({ ...base, signal, relationship: "deck_requested", materials: [] });
+    expect(deck.body).toContain("happy to share the RouteIQ deck");
+    expect(deck.body).not.toContain(signal.source_url);
+    expect(composeDraft({ ...base, signal, relationship: "meeting_requested", materials: [] }).body).toContain("find a time");
   });
   it("adapts to relationship state without claiming facts", () => {
     expect(composeDraft({ ...base, signal: null, relationship: "deck_requested", materials: [] }).subject).toMatch(/deck/);

@@ -51,37 +51,3 @@ export function followUpChecklist(i: { notes: string; openCommitments: string[];
   items.push("Update the investor's status and add a dated note.");
   return items;
 }
-
-export interface DraftInput {
-  founderName: string;
-  companyName: string;
-  oneLiner: string;
-  vc: { investor_name: string; firm_name: string };
-  signal: { evidence_summary: string; source_url: string; date: string | null } | null;
-  materials: { title: string; claim_text: string | null; approved: boolean }[];
-  relationship: string | null; // e.g. deck_requested
-}
-
-/**
- * Draft for the founder to edit and send themselves. Only approved materials appear. The signal line is attributed and
- * linked, and never claims the investor is interested in this company.
- */
-export function composeDraft(i: DraftInput): { subject: string; body: string; usedMaterials: string[]; warnings: string[] } {
-  const warnings: string[] = [];
-  const first = i.vc.investor_name === i.vc.firm_name ? "there" : i.vc.investor_name.split(" ")[0];
-  const claims = i.materials.filter((m) => m.approved && m.claim_text).slice(0, 3);
-  const lines: string[] = [`Hi ${first},`, ""];
-  if (i.relationship === "deck_requested") lines.push("Thanks for asking: I'm happy to share the deck.");
-  else if (i.relationship === "meeting_requested") lines.push("Thanks for the note, and I'd be glad to find a time to talk.");
-  else if (i.signal) lines.push(`I'm ${i.founderName}, founder of ${i.companyName}. ${i.oneLiner}`);
-  else { lines.push(`I'm ${i.founderName}, founder of ${i.companyName}. ${i.oneLiner}`); warnings.push("No recent signal for this investor yet, so this draft has no personal opening. Add one yourself or wait for a signal."); }
-  if (i.signal) {
-    const when = i.signal.date ? ` (${new Date(i.signal.date).toISOString().slice(0, 10)})` : "";
-    lines.push("", `I noticed ${i.signal.evidence_summary.replace(/\.$/, "")}${when}: ${i.signal.source_url}`);
-  }
-  if (claims.length) { lines.push("", "A few facts about us:"); for (const c of claims) lines.push(`- ${c.claim_text}`); }
-  else warnings.push("No approved company claims: add and approve some in the Data room so drafts carry real proof points.");
-  lines.push("", i.relationship === "deck_requested" ? "Deck attached for your review. Would a short call next week work?" : "Would you be open to a 20-minute call in the next couple of weeks?", "", "Best,", i.founderName);
-  if (!i.founderName || !i.companyName) warnings.push("Add your name and company in the Data room.");
-  return { subject: i.relationship === "deck_requested" ? `${i.companyName}: deck` : `${i.companyName} × ${i.vc.firm_name}`, body: lines.join("\n"), usedMaterials: claims.map((c) => c.title), warnings };
-}

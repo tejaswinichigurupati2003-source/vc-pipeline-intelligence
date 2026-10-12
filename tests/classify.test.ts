@@ -38,9 +38,23 @@ describe("classifyCandidates", () => {
   });
   it("429 -> LlmUnavailable(quota) without throwing anything else", async () => {
     const gen = async () => { throw Object.assign(new Error("quota"), { status: 429 }); };
-    const err = await classifyCandidates(vc(), prompt, NOW, gen).catch((e) => e);
+    const err = await classifyCandidates(vc(), prompt, NOW, gen, { sleep: async () => {} }).catch((e) => e);
     expect(err).toBeInstanceOf(LlmUnavailable);
     expect(err.reason).toBe("quota");
+  });
+  it("survives a brief 429 burst: waits, retries, and still returns results", async () => {
+    let n = 0; const waits: number[] = [];
+    const gen = async () => { n++; if (n <= 1) throw Object.assign(new Error("busy"), { status: 429 }); return good; };
+    const out = await classifyCandidates(vc(), prompt, NOW, gen, { sleep: async (ms) => { waits.push(ms); } });
+    expect(out.results).toHaveLength(1);
+    expect(waits).toEqual([2500]);
+  });
+  it("gives up after the retries when Gemini stays unavailable", async () => {
+    let n = 0;
+    const gen = async () => { n++; throw Object.assign(new Error("down"), { status: 503 }); };
+    const err = await classifyCandidates(vc(), prompt, NOW, gen, { sleep: async () => {} }).catch((e) => e);
+    expect(err).toBeInstanceOf(LlmUnavailable);
+    expect(n).toBe(3); // one attempt per retry round (no fallback model configured)
   });
   it("falls back to GEMINI_FALLBACK_MODEL on 429", async () => {
     process.env.GEMINI_FALLBACK_MODEL = "flash-2";

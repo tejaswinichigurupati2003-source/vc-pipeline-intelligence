@@ -6,7 +6,6 @@ import { buildMatchIndex, matchAddresses, parseAddresses } from "@/lib/relations
 import { decrypt, encrypt, signState, verifyState } from "@/lib/crypto";
 import { hasAdminSession, isAdmin, sessionValue } from "@/lib/auth";
 import { ENTITIES, cleanValues, coerce } from "@/lib/workspace/entities";
-import { assertPushable, FIELD_OWNERSHIP, PULLED_FIELDS } from "@/lib/crm/ownership";
 
 const c = (snippet: string, fromFounder = false, subject = "") => classifyThread({ lastFromFounder: fromFounder, lastInvestorSnippet: snippet, subject });
 
@@ -112,18 +111,5 @@ describe("workspace mutation allow-list", () => {
   it("notes can only be created as user-provenance, user-confirmed state", () => {
     expect(() => cleanValues(ENTITIES.note, { provenance: "gmail" })).toThrow();
     expect(() => cleanValues(ENTITIES.note, { state_confidence: "rule" })).toThrow();
-  });
-});
-
-describe("CRM field ownership", () => {
-  it("only our own vcpi_* properties can be pushed; foreign properties are refused", () => {
-    expect(() => assertPushable({ vcpi_signal_score: 80 })).not.toThrow();
-    expect(() => assertPushable({ name: "Hacked", vcpi_signal_score: 1 })).toThrow(/Refusing/);
-  });
-  it("manual fields are never pulled from the CRM", () => {
-    for (const f of ["contact_status", "personal_notes", "contact_history", "last_contact_at", "investment_thesis"]) {
-      expect(FIELD_OWNERSHIP[f].owner).toBe("product");
-      expect(PULLED_FIELDS).not.toContain(f);
-    }
   });
 });

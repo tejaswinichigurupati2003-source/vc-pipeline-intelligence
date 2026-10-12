@@ -7,6 +7,7 @@ import { db } from "@/lib/db/client";
 import { getVcDetail } from "@/lib/db/read";
 import { fitScore } from "@/lib/insights/fit";
 import { pathsForVc } from "@/lib/intros/service";
+import { buildDraftForVc } from "@/lib/workspace/drafts";
 import { signalDate } from "@/lib/scoring/score";
 import { STATE_LABEL, type RelationshipState } from "@/lib/relationships/classify";
 import { fmtDate, fmtDateTime, STATUS_LABEL } from "@/lib/view/format";
@@ -18,13 +19,14 @@ type Item = { at: number; node: React.ReactNode; key: string };
 export default async function WorkspaceVc({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   // Everything this page needs is independent of everything else: fetch it in one round trip.
-  const [d, { data: events }, { data: meetings }, { data: commitments }, { data: dd }, paths] = await Promise.all([
+  const [d, { data: events }, { data: meetings }, { data: commitments }, { data: dd }, paths, suggested] = await Promise.all([
     getVcDetail(id, true), // private notes allowed
     db().from("relationship_events").select("*").eq("vc_id", id),
     db().from("calendar_events").select("*").eq("vc_id", id),
     db().from("commitments").select("*").eq("vc_id", id).in("status", ["proposed", "open"]),
     db().from("diligence_requests").select("*").eq("vc_id", id),
     pathsForVc(id),
+    buildDraftForVc(id),
   ]);
   if (!d) notFound();
   const { vc, score } = d;
@@ -73,7 +75,7 @@ export default async function WorkspaceVc({ params }: { params: Promise<{ id: st
           <div><dt className="eyebrow">Notes</dt><dd className="mt-1 text-slate-700">{vc.personal_notes || "None yet"}</dd></div>
         </dl>
       </section>
-      <DraftPanel vcId={id} />
+      {suggested && <DraftPanel vcId={id} initial={{ subject: suggested.draft.subject, body: suggested.draft.body, to: suggested.to, warnings: suggested.draft.warnings, basedOn: suggested.basedOn }} />}
 
       <section className="mt-6">
         <h2 className="font-semibold">Introduction paths <Badge kind="neutral">possible</Badge></h2>

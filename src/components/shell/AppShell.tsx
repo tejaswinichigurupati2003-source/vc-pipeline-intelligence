@@ -45,6 +45,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
       { href: "/investors", label: "Investors", icon: "board", badge: all.length },
       { href: "/signals", label: "Market signals", icon: "signal" },
       { href: "/conversations", label: "Conversations", icon: "chat", badge: proposed.count || null },
+      { href: "/drafts", label: "Drafts", icon: "mail" },
       { href: "/intros", label: "Warm intros", icon: "intro" },
     ] },
     { title: "Prepare", items: [{ href: "/data-room", label: "Data room", icon: "folder" }] },
@@ -91,7 +92,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
                 <div className={`font-semibold ${failed ? "text-rose-700" : "text-slate-800"}`}>{run ? (failed ? "Last scan incomplete" : run.status === "running" ? "Scanning…" : "Signals up to date") : "No scan yet"}</div>
                 <div>{run ? timeAgo(run.finished_at ?? run.started_at) : "Run your first refresh"}</div>
               </div>
-              <RefreshControls stalled={stalled} runId={run?.id ?? null} open={open} />
+              <RefreshControls stalled={stalled} runId={run?.id ?? null} open={open} running={run?.status === "running"} />
             </div>
           </div>
         </header>

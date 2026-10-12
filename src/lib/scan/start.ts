@@ -10,6 +10,7 @@ export function chainBatch(origin: string, runId: string) {
       method: "POST",
       headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
       body: JSON.stringify({ run_id: runId }),
+      signal: AbortSignal.timeout(4000), // the next batch runs as its own invocation; only wait for it to start
     }).catch(() => {}),
   );
 }

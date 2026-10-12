@@ -245,7 +245,18 @@ export function extractFromHtml(html: string, url: string): FetchedPage {
   return { text, publishedAt, modifiedAt: ld.modified ?? metaMod, eventAt: ld.event, canonicalUrl, dateBasis };
 }
 
-export async function fetchPage(url: string): Promise<FetchedPage> {
-  const { body, finalUrl } = await safeFetchText(url);
-  return extractFromHtml(body, finalUrl);
+// The same article is often relevant to several investors (a funding round names three funds). Within one scan the page
+// is fetched once and shared, which also keeps us well inside the one-request-per-second-per-site courtesy limit.
+const PAGE_TTL_MS = 15 * 60_000;
+const pageCache = new Map<string, { at: number; page: Promise<FetchedPage> }>();
+
+export function fetchPage(url: string): Promise<FetchedPage> {
+  const key = canonicalizeUrl(url);
+  const hit = pageCache.get(key);
+  if (hit && Date.now() - hit.at < PAGE_TTL_MS) return hit.page;
+  if (pageCache.size > 500) for (const [k, v] of pageCache) if (Date.now() - v.at >= PAGE_TTL_MS) pageCache.delete(k);
+  const page = safeFetchText(url).then(({ body, finalUrl }) => extractFromHtml(body, finalUrl));
+  pageCache.set(key, { at: Date.now(), page });
+  page.catch(() => pageCache.delete(key)); // never cache a failure
+  return page;
 }
