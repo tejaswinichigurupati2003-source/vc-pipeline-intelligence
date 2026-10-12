@@ -26,12 +26,19 @@ function ConnectLink({ provider, label, ready }: { provider: string; label: stri
 
 export default async function Integrations({ searchParams }: { searchParams: Promise<{ connected?: string; error?: string }> }) {
   const sp = await searchParams;
-  const { data } = await db().from("integration_accounts").select("provider, account_label, scopes, status, config, last_sync_at, last_error, connected_at");
+  const [{ data }, { data: vcRows }, { data: contactRows }] = await Promise.all([
+    db().from("integration_accounts").select("provider, account_label, scopes, status, config, last_sync_at, last_error, connected_at"),
+    db().from("vc_pipeline").select("id, firm_domain"),
+    db().from("vc_contacts").select("vc_id").not("email", "is", null),
+  ]);
+  // Emails and meetings are matched to an investor by a saved email address or the firm's website domain.
+  const reachable = new Set([...(vcRows ?? []).filter((v) => v.firm_domain).map((v) => v.id), ...(contactRows ?? []).map((c) => c.vc_id)]);
+  const total = (vcRows ?? []).length;
   const acct = (p: string) => (data ?? []).find((a) => a.provider === p);
   const ready = googleConfigured();
   const gm = acct("gmail"), cal = acct("calendar");
 
-  const Card = ({ title, blurb, a, children, provider }: { title: string; blurb: string; a: ReturnType<typeof acct>; children: React.ReactNode; provider: "gmail" | "calendar" }) => (
+  const Card = ({ title, blurb, powers, a, children, provider }: { title: string; blurb: string; powers: { label: string; href: string }[]; a: ReturnType<typeof acct>; children: React.ReactNode; provider: "gmail" | "calendar" }) => (
     <section className="card flex min-w-0 flex-col">
       <header className="flex items-center justify-between gap-2 border-b border-slate-900 bg-slate-50 px-4 py-3">
         <h2>{title}</h2>
@@ -39,13 +46,23 @@ export default async function Integrations({ searchParams }: { searchParams: Pro
       </header>
       <div className="min-w-0 flex-1 p-4">
         <p className="text-[0.9rem] leading-relaxed text-slate-600">{blurb}</p>
+        <div className="mt-3 border border-slate-200 bg-slate-50 px-3 py-2.5">
+          <div className="eyebrow mb-1.5">Powers these features</div>
+          <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[0.85rem]">{powers.map((p) => <li key={p.label}><a href={p.href}>{p.label}</a></li>)}</ul>
+        </div>
+        {a && a.status === "connected" && reachable.size < total && (
+          <p className={`mt-3 border px-3 py-2 text-[0.85rem] ${reachable.size === 0 ? "border-amber-300 bg-amber-50 text-amber-900" : "border-slate-200 text-slate-600"}`}>
+            We can match {provider === "gmail" ? "emails" : "meetings"} for <b>{reachable.size} of {total}</b> investors. Add a website or an email address to the others on their pages so their {provider === "gmail" ? "emails" : "meetings"} show up.
+          </p>
+        )}
         {a && (
           <dl className="mt-4 grid grid-cols-[5.5rem_minmax(0,1fr)] gap-x-3 gap-y-2 text-[0.85rem]">
             <dt>Account</dt><dd className="min-w-0 break-words text-slate-800">{a.account_label ?? "—"}</dd>
             <dt>Access</dt><dd className="min-w-0 break-words text-slate-800">{permissions(a.scopes as string[]).map((p) => <span key={p} className="block">{p}</span>)}</dd>
             <dt>Last sync</dt><dd className="min-w-0 break-words text-slate-800">{a.last_sync_at ? fmtDateTime(a.last_sync_at) : "Not yet"}</dd>
             {(() => {
-              const err = friendlyIntegrationError(a.last_error, provider);
+              const chosen = ((a.config as { labelIds?: string[]; calendarIds?: string[] }).labelIds ?? (a.config as { calendarIds?: string[] }).calendarIds ?? []).length > 0;
+              const err = friendlyIntegrationError(chosen && /Choose at least one/i.test(a.last_error ?? "") ? null : a.last_error, provider);
               return err ? (<><dt className="text-rose-700">Issue</dt><dd className="min-w-0 text-rose-700">{err.text}{err.fixUrl && <> <a href={err.fixUrl} target="_blank" rel="noopener noreferrer" className="font-semibold underline">{err.fixLabel}</a></>}</dd></>) : null;
             })()}
           </dl>
@@ -68,7 +85,7 @@ export default async function Integrations({ searchParams }: { searchParams: Pro
       {sp.error && <p className="mb-4 border border-rose-300 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-900">We couldn&apos;t complete the connection. Please try again.</p>}
 
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-2">
-        <Card provider="gmail" title="Gmail" a={gm} blurb="See which investors have replied, spot requests for your deck or a meeting, and save drafts for you to review and send. Only the labels you pick are read.">
+        <Card provider="gmail" title="Gmail" a={gm} powers={[{ label: "Conversations", href: "/conversations" }, { label: "Today: who to follow up", href: "/" }, { label: "Investor timelines", href: "/investors" }, { label: "Drafts: save to Gmail", href: "/drafts" }]} blurb="See which investors have replied, spot requests for your deck or a meeting, and save drafts for you to review and send. Only the labels you pick are read.">
           {!gm ? <ConnectLink provider="gmail" label="Connect Gmail" ready={ready} /> : (
             <div className="mt-4 space-y-3">
               <ScopePicker provider="gmail" selected={(gm.config as { labelIds?: string[] }).labelIds ?? []} />
@@ -77,7 +94,7 @@ export default async function Integrations({ searchParams }: { searchParams: Pro
           )}
         </Card>
 
-        <Card provider="calendar" title="Google Calendar" a={cal} blurb="Get a briefing before each investor meeting and a reminder to follow up afterwards. Only meetings with investors you track are kept.">
+        <Card provider="calendar" title="Google Calendar" a={cal} powers={[{ label: "Meetings and briefs", href: "/meetings" }, { label: "Today: upcoming meetings", href: "/" }, { label: "Warm intros", href: "/intros" }, { label: "Investor timelines", href: "/investors" }]} blurb="Get a briefing before each investor meeting and a reminder to follow up afterwards. Only meetings with investors you track are kept.">
           {!cal ? <ConnectLink provider="calendar" label="Connect Calendar" ready={ready} /> : (
             <div className="mt-4 space-y-3">
               <ScopePicker provider="calendar" selected={(cal.config as { calendarIds?: string[] }).calendarIds ?? []} />
