@@ -109,6 +109,10 @@ describe("rules-only degraded mode", () => {
     expect(r.outcome).toBe("accepted");
     expect(r.signal).toMatchObject({ evidence_basis: "headline_only", confidence: "medium", relevance_score: 0.5 });
   });
+  it("rejects bare tag/index-page headlines (fewer than 5 words)", () => {
+    const c = cand({ title: "DHRUVA CAPITAL MERGER", snippet: "Capital invested merger funding logistics" });
+    expect(validateRulesOnly(c, { vc: vc({ firm_name: "Dhruva Capital", investor_name: "Dhruva Capital" }), candidate: c, runStartedAt: NOW, knownEventKeys: new Set() }).outcome).toBe("rejected_prefilter");
+  });
   it("rejects when any ingredient is missing", () => {
     const c = cand({ title: "Route Ventures hosts quarterly dinner", snippet: "" });
     expect(validateRulesOnly(c, { vc: vc(), candidate: c, runStartedAt: NOW, knownEventKeys: new Set() }).outcome).toBe("rejected_prefilter");

@@ -131,6 +131,8 @@ export function validateClassification(
 /** Degraded mode (spec 9.5): no LLM. Entity + action word + sector keyword in title/snippet, dated inside window. */
 export function validateRulesOnly(c: Candidate, ctx: Ctx): ValidationResult {
   const { vc } = ctx;
+  if (c.title.trim().split(/\s+/).length < 5) return { outcome: "rejected_prefilter", reason: "rules-only: headline too short to be a real news item (tag or index page)" };
+  if (c.title.trim().split(/\s+/).length < 5) return { outcome: "rejected_prefilter", reason: "rules-only: headline too short to be a real news item (tag or index page)" };
   const m = rulesOnlyMatch(c, vc);
   if (!m.ok) return { outcome: "rejected_prefilter", reason: "rules-only: needs name + action word + sector keyword" };
   const date = parseDate(c.providerDate);

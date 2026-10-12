@@ -155,7 +155,8 @@ export async function scanVc(vc: VcProfile, ctx: RunContext): Promise<VcScanResu
         if (!(e instanceof LlmUnavailable)) throw e;
         scanMode = "rules_only";
         degradedReason = e.reason === "quota" ? "llm_quota" : "llm_error";
-        ctx.addLlmCalls(1);
+        llmCalls = e.calls;
+        ctx.addLlmCalls(e.calls);
         if (e.reason === "quota") ctx.markDegraded();
       }
     }

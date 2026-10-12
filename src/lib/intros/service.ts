@@ -19,6 +19,14 @@ export async function ensureVcNode(vcId: string, label: string): Promise<string>
   return n.id;
 }
 
+/** One read + one bulk insert instead of a query per investor. */
+export async function ensureAllVcNodes(vcs: { id: string; firm_name: string }[]) {
+  const { data: have } = await db().from("warm_nodes").select("vc_id").eq("kind", "vc");
+  const done = new Set((have ?? []).map((n) => n.vc_id));
+  const missing = vcs.filter((v) => !done.has(v.id)).map((v) => ({ kind: "vc", label: v.firm_name, vc_id: v.id, source: "system" }));
+  if (missing.length) await db().from("warm_nodes").insert(missing);
+}
+
 export async function loadGraph(): Promise<{ nodes: GNode[]; edges: GEdge[] }> {
   const { data: nodes } = await db().from("warm_nodes").select("id, kind, label, vc_id");
   const { data: edges } = await db().from("warm_edges").select("*");

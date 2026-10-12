@@ -5,7 +5,7 @@ import type { VcProfile } from "@/lib/types";
 import { buildSystemInstruction, buildUserMessage, type PromptCandidate } from "./prompt";
 
 export class LlmUnavailable extends Error {
-  constructor(public reason: "quota" | "error" | "invalid_json", message: string) {
+  constructor(public reason: "quota" | "error" | "invalid_json", message: string, public calls = 1) {
     super(message);
   }
 }
@@ -111,16 +111,16 @@ export async function classifyCandidates(
         lastErr = e;
         const s = statusOf(e);
         if (s === 429 || (s !== undefined && s >= 500)) break; // next model
-        throw new LlmUnavailable("error", `Gemini error: ${(e as Error).message}`);
+        throw new LlmUnavailable("error", `Gemini error: ${(e as Error).message}`, calls);
       }
       try {
         return { results: parseClassification(raw, ids), calls };
       } catch (e) {
         lastErr = e;
-        if (attempt === 1) throw new LlmUnavailable("invalid_json", "Gemini returned invalid JSON twice");
+        if (attempt === 1) throw new LlmUnavailable("invalid_json", "Gemini returned invalid JSON twice", calls);
       }
     }
   }
   const quota = statusOf(lastErr) === 429;
-  throw new LlmUnavailable(quota ? "quota" : "error", `Gemini unavailable: ${(lastErr as Error)?.message ?? "unknown"}`);
+  throw new LlmUnavailable(quota ? "quota" : "error", `Gemini unavailable: ${(lastErr as Error)?.message ?? "unknown"}`, calls);
 }

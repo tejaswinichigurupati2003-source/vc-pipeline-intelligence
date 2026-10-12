@@ -2,14 +2,14 @@ import Link from "next/link";
 import { ApiButton, ApiForm, Badge } from "@/components/ui";
 import { db } from "@/lib/db/client";
 import { findPaths } from "@/lib/intros/paths";
-import { ensureVcNode, loadGraph } from "@/lib/intros/service";
+import { ensureAllVcNodes, loadGraph } from "@/lib/intros/service";
 import { fmtDate } from "@/lib/view/format";
 
 export const dynamic = "force-dynamic";
 
 export default async function Intros() {
   const { data: vcs } = await db().from("vc_pipeline").select("id, firm_name").order("firm_name");
-  for (const v of vcs ?? []) await ensureVcNode(v.id, v.firm_name);
+  await ensureAllVcNodes(vcs ?? []);
   const { nodes, edges } = await loadGraph();
   const label = new Map(nodes.map((n) => [n.id, n]));
   const founder = nodes.find((n) => n.kind === "founder");
