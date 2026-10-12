@@ -24,7 +24,7 @@ export interface TodayInput {
   max?: number;
 }
 export interface TodayAction {
-  key: string; type: ActionType; vcId: string | null; title: string; reason: string; priority: number;
+  key: string; type: ActionType; vcId: string | null; title: string; firm: string; what: string; reason: string; priority: number;
   provenance: Provenance; sourceUrl?: string | null;
 }
 export interface Suppressed { vcId: string; firm: string; reason: string }
@@ -54,7 +54,7 @@ export function buildToday(i: TodayInput): { actions: TodayAction[]; suppressed:
     if (!["awaiting_founder", "deck_requested", "meeting_requested"].includes(s.state)) continue;
     const label = s.state === "deck_requested" ? "Send the deck they asked for" : s.state === "meeting_requested" ? "Reply to their meeting request" : "Reply: they wrote last";
     push({
-      key: `respond:${vcId}`, type: "respond", vcId, title: `${vcName.get(vcId) ?? "Investor"}: ${label}`, priority: 100,
+      key: `respond:${vcId}`, type: "respond", vcId, title: `${vcName.get(vcId) ?? "Investor"}: ${label}`, firm: vcName.get(vcId) ?? "Investor", what: label, priority: 100,
       reason: s.confirmed ? "You confirmed this relationship state." : "Inferred from the last email in the thread (rule-based); confirm or correct it.",
       provenance: s.confirmed ? "user_confirmed" : "inferred",
     });
@@ -67,7 +67,7 @@ export function buildToday(i: TodayInput): { actions: TodayAction[]; suppressed:
     const days = (new Date(c.due_at).getTime() - i.now.getTime()) / DAY;
     if (days > 7) continue;
     push({
-      key: `commitment:${c.id}`, type: "commitment_due", vcId: c.vc_id, title: `${vcName.get(c.vc_id) ?? "Investor"}: ${c.text.slice(0, 90)}`,
+      key: `commitment:${c.id}`, type: "commitment_due", vcId: c.vc_id, title: `${vcName.get(c.vc_id) ?? "Investor"}: ${c.text.slice(0, 90)}`, firm: vcName.get(c.vc_id) ?? "Investor", what: c.text.slice(0, 140),
       priority: days < 0 ? 98 : 90, reason: days < 0 ? `Overdue by ${Math.ceil(-days)}d.` : `Due in ${Math.max(0, Math.ceil(days))}d.`,
       provenance: c.status === "open" ? "user_confirmed" : "inferred",
     });
@@ -77,8 +77,8 @@ export function buildToday(i: TodayInput): { actions: TodayAction[]; suppressed:
   for (const m of i.meetings) {
     if (!m.vc_id || !m.included) continue;
     const d = (new Date(m.start_at).getTime() - i.now.getTime()) / DAY;
-    if (d >= 0 && d <= 3) push({ key: `prep:${m.id}`, type: "meeting_prep", vcId: m.vc_id, title: `Prepare: ${m.title ?? "meeting"} with ${vcName.get(m.vc_id)}`, priority: 80, reason: `Meeting in ${Math.ceil(d)}d. Open the brief.`, provenance: "verified" });
-    if (d < 0 && d >= -7 && !m.followup_done) push({ key: `post:${m.id}`, type: "post_meeting", vcId: m.vc_id, title: `Follow up after: ${m.title ?? "meeting"} with ${vcName.get(m.vc_id)}`, priority: 85, reason: `Met ${Math.ceil(-d)}d ago${m.notes_confirmed ? "" : "; add your notes to build the checklist"}.`, provenance: "verified" });
+    if (d >= 0 && d <= 3) push({ key: `prep:${m.id}`, type: "meeting_prep", vcId: m.vc_id, title: `Prepare: ${m.title ?? "meeting"} with ${vcName.get(m.vc_id)}`, firm: vcName.get(m.vc_id) ?? "Investor", what: `Prepare for ${m.title ?? "your meeting"}`, priority: 80, reason: `Meeting in ${Math.ceil(d)}d. Open the brief.`, provenance: "verified" });
+    if (d < 0 && d >= -7 && !m.followup_done) push({ key: `post:${m.id}`, type: "post_meeting", vcId: m.vc_id, title: `Follow up after: ${m.title ?? "meeting"} with ${vcName.get(m.vc_id)}`, firm: vcName.get(m.vc_id) ?? "Investor", what: `Follow up after ${m.title ?? "your meeting"}`, priority: 85, reason: `Met ${Math.ceil(-d)}d ago${m.notes_confirmed ? "" : "; add your notes to build the checklist"}.`, provenance: "verified" });
     if (d >= 0 && d <= 3) claimed.add(m.vc_id);
   }
 
@@ -89,14 +89,14 @@ export function buildToday(i: TodayInput): { actions: TodayAction[]; suppressed:
     if (v.bucket === "stale") { suppressed.push({ vcId: v.id, firm: v.firm_name, reason: "Last scan failed: not shown as quiet or active until a refresh succeeds." }); continue; }
     if (claimed.has(v.id) && v.contact_status !== "yet_to_reach_out") continue;
     if (v.bucket === "reach_out" && v.contact_status === "yet_to_reach_out") {
-      push({ key: `reach:${v.id}`, type: "reach_out", vcId: v.id, title: `Reach out to ${v.firm_name}`, priority: 50 + Math.round((v.follow_up_score ?? 0) / 4), // max 75: never outranks a due commitment (90) or a reply (100)
+      push({ key: `reach:${v.id}`, type: "reach_out", vcId: v.id, title: `Reach out to ${v.firm_name}`, firm: v.firm_name, what: "Reach out and cite their recent signal", priority: 50 + Math.round((v.follow_up_score ?? 0) / 4), // max 75: never outranks a due commitment (90) or a reply (100)
         reason: v.signal_summary ?? "Fresh verified public signal.", provenance: "verified", sourceUrl: v.top_signal_url });
       continue;
     }
     if (v.contact_status === "waiting_for_response") {
       const since = v.last_contact_at ? (i.now.getTime() - new Date(v.last_contact_at).getTime()) / DAY : null;
       if (since !== null && since >= followAfter && !i.states[v.id]) {
-        push({ key: `follow:${v.id}`, type: "follow_up", vcId: v.id, title: `Follow up with ${v.firm_name}`, priority: 40 + Math.min(20, Math.round(since - followAfter)),
+        push({ key: `follow:${v.id}`, type: "follow_up", vcId: v.id, title: `Follow up with ${v.firm_name}`, firm: v.firm_name, what: "Follow up", priority: 40 + Math.min(20, Math.round(since - followAfter)),
           reason: `No reply logged in ${Math.floor(since)}d since your last contact (${new Date(v.last_contact_at!).toISOString().slice(0, 10)}).`, provenance: "user_confirmed" });
       } else {
         suppressed.push({ vcId: v.id, firm: v.firm_name, reason: since === null ? "Awaiting a reply; no contact date recorded." : `Awaiting a reply; only ${Math.floor(since)}d since last contact (follow up after ${followAfter}d).` });

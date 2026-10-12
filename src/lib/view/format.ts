@@ -12,8 +12,8 @@ export function fmtDateTime(iso: string | null | undefined): string {
 }
 
 export const STATUS_LABEL: Record<string, string> = {
-  yet_to_reach_out: "Yet to reach out",
-  waiting_for_response: "Waiting for response",
+  yet_to_reach_out: "Not contacted",
+  waiting_for_response: "Awaiting reply",
   in_conversation: "In conversation",
   closed: "Closed",
 };

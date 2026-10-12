@@ -35,6 +35,20 @@ try {
   check("commit inserted the test investor", c1.j.inserted === 1, JSON.stringify(c1.j));
   const vc = (await db.from("vc_pipeline").select("*").eq("firm_name", "ZZ Live Check VC").single()).data!;
 
+  // 1b. drag-and-drop stage move: only contact_status (+ first-time last_contact_at); never the signal columns
+  const mv1 = await api("/api/investors/status", { vc_id: vc.id, status: "waiting_for_response" });
+  const afterMove = (await db.from("vc_pipeline").select("contact_status, last_contact_at, personal_notes, follow_up_score, recommended_action").eq("id", vc.id).single()).data!;
+  check("move to 'awaiting reply' sets status and stamps last_contact_at once", mv1.status === 200 && afterMove.contact_status === "waiting_for_response" && !!afterMove.last_contact_at);
+  const stamped = afterMove.last_contact_at;
+  await api("/api/investors/status", { vc_id: vc.id, status: "yet_to_reach_out" });
+  await api("/api/investors/status", { vc_id: vc.id, status: "waiting_for_response" });
+  check("moving again never overwrites an existing contact date", (await db.from("vc_pipeline").select("last_contact_at").eq("id", vc.id).single()).data!.last_contact_at === stamped);
+  check("move leaves notes and signal columns untouched", afterMove.personal_notes === "original private note" && afterMove.follow_up_score === null && afterMove.recommended_action === null);
+  const badMove = await api("/api/investors/status", { vc_id: vc.id, status: "hacked" });
+  check("invalid stage is rejected", badMove.status === 400);
+  await api("/api/investors/status", { vc_id: vc.id, status: "yet_to_reach_out" });
+  await db.from("vc_pipeline").select("id").eq("id", vc.id); // (stage reset; last_contact_at was set by the move and is cleared on removal)
+
   // 2. re-import with a blank to fill and a different note -> fill + conflict, existing note untouched
   const csv2 = "investor,firm,website,status,notes\nZZ Partner,ZZ Live Check VC,zzcheck.example,yet to reach out,A DIFFERENT NOTE\n";
   const p2 = await api("/api/import/preview", { csv: csv2 });

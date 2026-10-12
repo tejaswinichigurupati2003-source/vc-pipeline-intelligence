@@ -1,4 +1,5 @@
 import ImportWizard from "@/components/ImportWizard";
+import PageHeader from "@/components/shell/PageHeader";
 import { ApiButton, Badge } from "@/components/ui";
 import { db } from "@/lib/db/client";
 import { fmtDateTime } from "@/lib/view/format";
@@ -13,10 +14,9 @@ export default async function ImportPage() {
 
   return (
     <main className="max-w-4xl">
-      <h1 className="text-2xl font-bold">Import & export</h1>
-      <p className="mb-4 text-sm text-slate-600">Bring in your existing tracker without losing anything, and take your data out whenever you like.</p>
+      <PageHeader title="Import & export" subtitle={<>Bring in your existing tracker without losing anything, and take your data out whenever you like.</>} />
 
-      <section className="mb-8 rounded-lg border bg-white p-4"><ImportWizard /></section>
+      <section className="mb-8 card p-4"><ImportWizard /></section>
 
       <section className="mb-8">
         <h2 className="mb-2 font-semibold">Conflicts to resolve ({conflicts?.length ?? 0})</h2>
@@ -24,7 +24,7 @@ export default async function ImportPage() {
         {!conflicts?.length && <p className="text-sm text-slate-500">None.</p>}
         <ul className="space-y-2">
           {(conflicts ?? []).map((c) => (
-            <li key={c.id} className="rounded border bg-white p-3 text-sm">
+            <li key={c.id} className="card-sm p-3 text-sm">
               <div><b>{name.get(c.vc_id)}</b> · <code>{c.field}</code> <Badge kind="neutral">{c.source}</Badge> <span className="text-xs text-slate-500">matched by {c.match_basis.replace(/_/g, " ")}</span></div>
               <div className="mt-1 grid gap-2 text-xs md:grid-cols-2">
                 <div className="rounded bg-slate-50 p-2"><div className="text-slate-500">Existing (kept)</div>{c.existing_value}</div>
@@ -52,7 +52,7 @@ export default async function ImportPage() {
         <h2 className="mb-2 font-semibold">Import history</h2>
         <ul className="space-y-1 text-sm">
           {(batches ?? []).map((b) => (
-            <li key={b.id} className="flex flex-wrap items-center gap-2 rounded border bg-white p-2">
+            <li key={b.id} className="flex flex-wrap items-center gap-2 card-sm p-2">
               <span>{fmtDateTime(b.created_at)}</span> <Badge kind="neutral">{b.source}</Badge> <span>{b.filename ?? ""}</span>
               <span className="text-xs text-slate-500">{(b.summary as { insert?: number; merge?: number }).insert ?? 0} new, {(b.summary as { merge?: number }).merge ?? 0} merged</span>
               {b.status === "reverted" ? <Badge kind="warn">reverted</Badge> : (b.created_vc_ids as string[]).length > 0 && (

@@ -1,4 +1,5 @@
 import { ApiButton, ApiForm, Badge } from "@/components/ui";
+import PageHeader from "@/components/shell/PageHeader";
 import { db } from "@/lib/db/client";
 import { fmtDate } from "@/lib/view/format";
 import { getSettings } from "@/lib/workspace/data";
@@ -17,10 +18,9 @@ export default async function Materials() {
 
   return (
     <main>
-      <h1 className="text-2xl font-bold">Materials & diligence</h1>
-      <p className="mb-5 text-sm text-slate-600">Drafts and meeting briefs only ever use claims you have <b>approved</b>. Document readiness: {approved} approved item(s), {open} open investor request(s).</p>
+      <PageHeader title="Data room" subtitle={<>Drafts and meeting briefs only ever use claims you have <b>approved</b>. Document readiness: {approved} approved item(s), {open} open investor request(s).</>} />
 
-      <section className="mb-8 rounded-lg border bg-white p-4">
+      <section className="mb-8 card p-4">
         <h2 className="font-semibold">Company profile (used in drafts)</h2>
         <div className="mt-2 grid gap-3 md:grid-cols-3">
           {[settingField("founder_name", "Your name", s.founder_name), settingField("company_name", "Company name", s.company_name), settingField("company_one_liner", "One-liner", s.company_one_liner)].map((f) => (
@@ -36,7 +36,7 @@ export default async function Materials() {
           envelope={{ entity: "materials", op: "insert" }} />
         <ul className="space-y-2">
           {(materials ?? []).map((m) => (
-            <li key={m.id} className="rounded border bg-white p-3 text-sm">
+            <li key={m.id} className="card-sm p-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
                 <b>{m.title}</b> <Badge kind="neutral">{m.kind}</Badge>
                 {m.approved ? <Badge kind="confirmed">Approved {fmtDate(m.approved_at)}</Badge> : <Badge kind="inferred">Not approved: excluded from drafts</Badge>}
@@ -57,7 +57,7 @@ export default async function Materials() {
           envelope={{ entity: "diligence", op: "insert" }} />
         <ul className="space-y-2">
           {(dd ?? []).map((d) => (
-            <li key={d.id} className="flex flex-wrap items-center gap-2 rounded border bg-white p-3 text-sm">
+            <li key={d.id} className="flex flex-wrap items-center gap-2 card-sm p-3 text-sm">
               <span>{name.get(d.vc_id)}: {d.request_text}</span>
               <Badge kind={d.status === "provided" ? "verified" : d.status === "blocked" ? "warn" : "inferred"}>{d.status}</Badge>
               {d.due_at && <span className="text-xs text-slate-500">due {fmtDate(d.due_at)}</span>}

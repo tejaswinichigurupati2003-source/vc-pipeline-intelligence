@@ -1,4 +1,5 @@
 import Link from "next/link";
+import PageHeader from "@/components/shell/PageHeader";
 import { ApiButton, ApiForm, Badge } from "@/components/ui";
 import { db } from "@/lib/db/client";
 import { findPaths } from "@/lib/intros/paths";
@@ -19,19 +20,16 @@ export default async function Intros() {
 
   return (
     <main>
-      <h1 className="text-2xl font-bold">Introduction paths</h1>
-      <p className="mb-4 max-w-3xl text-sm text-slate-600">
-        Possible routes from you to an investor, built only from relationships <b>you</b> provide or approve. Appearing on the same email or event is weak evidence, so those edges start unconfirmed, capped at low confidence, and never count as actionable until you confirm them. Nothing here comes from anyone else&apos;s data.
-      </p>
+      <PageHeader title="Warm intros" subtitle={<>Possible routes from you to an investor, built only from relationships <b>you</b> provide or approve. Appearing on the same email or event is weak evidence, so those edges start unconfirmed, capped at low confidence, and never count as actionable until you confirm them. Nothing here comes from anyone else&apos;s data.</>} />
 
       <section className="mb-6 grid gap-6 md:grid-cols-2">
-        <div className="rounded-lg border bg-white p-4">
+        <div className="card p-4">
           <h2 className="font-semibold">1. Add your contacts</h2>
           <p className="mb-2 text-xs text-slate-500">Paste a CSV you choose to share. Columns: name, email, company, relationship (knows/worked_with/introduced), confidence (0-1), vc_firm (works at a tracked firm), portfolio_of (founded a company that firm backed), note.</p>
           <ApiForm url="/api/intros" fields={[{ name: "csv", label: "Contacts CSV", type: "textarea", required: true, placeholder: "name,email,company,relationship,portfolio_of\nAsha Rao,asha@example.com,TruckLens,knows,Blume Ventures" }]} extra={{ action: "contacts_csv" }} submit="Import contacts" />
           <div className="mt-3"><ApiForm url="/api/intros" className="flex items-end gap-2" fields={[{ name: "label", label: "Your name in the graph", required: true, defaultValue: founder?.label ?? "" }]} extra={{ action: "set_founder" }} submit="Set" /></div>
         </div>
-        <div className="rounded-lg border bg-white p-4">
+        <div className="card p-4">
           <h2 className="font-semibold">2. Add or correct a relationship</h2>
           <ApiForm url="/api/intros" fields={[
             { name: "to_node", label: "Person / investor", type: "select", options: nodeOptions, required: true },
@@ -48,7 +46,7 @@ export default async function Intros() {
         {withPaths.map(({ v, paths }) => {
           const p = paths[0];
           return (
-            <li key={v.id} className="rounded-lg border bg-white p-3 text-sm">
+            <li key={v.id} className="card p-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
                 <Link href={`/workspace/vc/${v.id}`} className="font-medium">{v.firm_name}</Link>
                 <Badge kind="neutral">possible introduction path</Badge>
@@ -62,7 +60,7 @@ export default async function Intros() {
       </ul>
 
       <h2 className="mb-2 font-semibold">All relationships ({edges.length})</h2>
-      <div className="overflow-x-auto rounded-lg border bg-white">
+      <div className="overflow-x-auto card">
         <table className="w-full text-left text-xs">
           <thead className="bg-slate-100 uppercase text-slate-500"><tr><th className="p-2">From → To</th><th className="p-2">Type</th><th className="p-2">Provenance</th><th className="p-2">Conf.</th><th className="p-2">Last seen</th><th className="p-2">Status</th><th className="p-2"></th></tr></thead>
           <tbody>

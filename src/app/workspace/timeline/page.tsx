@@ -1,4 +1,5 @@
 import Link from "next/link";
+import PageHeader from "@/components/shell/PageHeader";
 import { ApiButton, ApiForm, Badge } from "@/components/ui";
 import { db } from "@/lib/db/client";
 import { RELATIONSHIP_STATES, STATE_LABEL } from "@/lib/relationships/classify";
@@ -19,8 +20,7 @@ export default async function Timeline() {
 
   return (
     <main>
-      <h1 className="text-2xl font-bold">Relationship timeline</h1>
-      <p className="mb-4 text-sm text-slate-600">Meetings, selected email threads, commitments and your own notes. <Badge kind="private">Private connected data</Badge> <Badge kind="note">Your note</Badge> are kept visually separate from public evidence.</p>
+      <PageHeader title="Conversations" subtitle={<>Meetings, selected email threads, commitments and your own notes. <Badge kind="private">Private connected data</Badge> <Badge kind="note">Your note</Badge> are kept visually separate from public evidence.</>} />
 
       {unmatched.length > 0 && (
         <section className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-4">
@@ -43,7 +43,7 @@ export default async function Timeline() {
         {!commitments?.length && <p className="text-sm text-slate-500">None. Commitments proposed from emails appear here for you to confirm.</p>}
         <ul className="space-y-2">
           {(commitments ?? []).map((c) => (
-            <li key={c.id} className="rounded border bg-white p-3 text-sm">
+            <li key={c.id} className="card-sm p-3 text-sm">
               <div>{c.text}</div>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                 <span>{name.get(c.vc_id) ?? "Unassigned"} · due {fmtDate(c.due_at)} · {c.who === "founder" ? "you owe" : "investor owes"}</span>
@@ -62,7 +62,7 @@ export default async function Timeline() {
         {!meetings?.length && <p className="text-sm text-slate-500">No investor meetings synced. Connect Calendar under Integrations.</p>}
         <ul className="space-y-2">
           {(meetings ?? []).map((m) => (
-            <li key={m.id} className={`rounded border bg-white p-3 text-sm ${m.included ? "" : "opacity-50"}`}>
+            <li key={m.id} className={`card-sm p-3 text-sm ${m.included ? "" : "opacity-50"}`}>
               <div className="flex flex-wrap items-center gap-2"><Badge kind="private">Calendar</Badge><b>{m.title}</b> with {name.get(m.vc_id) ?? "?"} · {fmtDateTime(m.start_at)}</div>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <Link href={`/workspace/meetings/${m.id}`} className="text-xs">Brief & follow-up</Link>
@@ -85,7 +85,7 @@ export default async function Timeline() {
         <h2 className="mb-2 font-semibold">All interactions</h2>
         <ul className="space-y-2">
           {(events ?? []).filter((e) => e.vc_id).map((e) => (
-            <li key={e.id} className="rounded border bg-white p-3 text-sm">
+            <li key={e.id} className="card-sm p-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
                 {e.provenance === "user" ? <Badge kind="note">Your note</Badge> : <Badge kind="private">{e.provenance === "gmail" ? "Gmail (selected label)" : "Calendar"}</Badge>}
                 <Link href={`/workspace/vc/${e.vc_id}`}>{name.get(e.vc_id)}</Link>

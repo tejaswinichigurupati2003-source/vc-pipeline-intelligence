@@ -37,6 +37,12 @@ export async function applyResolution(vcId: string, field: string, value: string
   if (error) throw new Error(`import_apply_resolution: ${error.message}`);
 }
 
+/** Founder drags a card to another stage. Allow-listed RPC: contact_status only (see 006_stage_move.sql). */
+export async function setContactStatus(vcId: string, status: string): Promise<void> {
+  const { error } = await db().rpc("user_set_contact_status", { p_vc_id: vcId, p_status: status });
+  if (error) throw new Error(`user_set_contact_status: ${error.message}`);
+}
+
 export async function deleteVcByUser(vcId: string): Promise<void> {
   const { error } = await db().rpc("user_delete_vc", { p_vc_id: vcId });
   if (error) throw new Error(`user_delete_vc: ${error.message}`);

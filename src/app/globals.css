@@ -3,5 +3,32 @@
 @tailwind utilities;
 
 :root { color-scheme: light; }
-body { @apply bg-slate-50 text-slate-900 antialiased; }
-a { @apply text-indigo-700 hover:underline; }
+
+@layer base {
+  html { font-size: 14.5px; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  body { @apply bg-slate-50 font-sans text-slate-800; font-feature-settings: "cv11", "ss01"; }
+  h1 { @apply text-[1.65rem] font-extrabold leading-tight tracking-tight text-slate-900; }
+  h2 { @apply text-[1.02rem] font-bold tracking-tight text-slate-900; }
+  h3 { @apply font-semibold text-slate-900; }
+  a { @apply text-indigo-700 underline-offset-2 hover:underline; }
+  ::selection { background: #d2cbff; }
+
+  input:not([type="checkbox"]):not([type="file"]), select, textarea {
+    @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[0.93rem] text-slate-800 shadow-card transition;
+  }
+  input::placeholder, textarea::placeholder { @apply text-slate-400; }
+  input:not([type="checkbox"]):focus, select:focus, textarea:focus { @apply border-indigo-400 outline-none shadow-ring; }
+  input[type="checkbox"] { @apply h-4 w-4 rounded border-slate-300 accent-indigo-600; }
+  code { @apply rounded bg-slate-100 px-1.5 py-0.5 text-[0.85em] text-slate-700; }
+  dt { @apply text-slate-500; }
+}
+
+@layer components {
+  .card { @apply rounded-xl border border-slate-200 bg-white shadow-card; }
+  .card-sm { @apply rounded-lg border border-slate-200 bg-white shadow-card; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition disabled:opacity-50; }
+  .btn-primary { @apply btn bg-indigo-600 text-white shadow-card hover:bg-indigo-700; }
+  .btn-ghost { @apply btn border border-slate-200 bg-white text-slate-700 hover:bg-slate-50; }
+  .eyebrow { @apply text-[0.7rem] font-bold uppercase tracking-[0.08em] text-slate-500; }
+  .scroll-thin { scrollbar-width: thin; scrollbar-color: #cdd2de transparent; }
+}

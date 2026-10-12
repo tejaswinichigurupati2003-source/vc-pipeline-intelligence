@@ -1,4 +1,5 @@
 import Link from "next/link";
+import PageHeader from "@/components/shell/PageHeader";
 import { Badge, ApiButton } from "@/components/ui";
 import { db } from "@/lib/db/client";
 import { fmtDate } from "@/lib/view/format";
@@ -15,12 +16,11 @@ export default async function Signals() {
 
   return (
     <main>
-      <h1 className="text-2xl font-bold">Signal feed</h1>
-      <p className="mb-4 text-sm text-slate-600">Verified public evidence, newest first. Every item has its source link and both dates. Last scan: {runs?.[0] ? `${fmtDate(runs[0].started_at)} (${runs[0].status})` : "never"}.</p>
-      {!items.length && <p className="rounded border bg-white p-4 text-sm">No verified signals yet. They appear after the first successful scan. A scan that finds nothing is different from a scan that failed: check Round health.</p>}
+      <PageHeader title="Market signals" subtitle={<>Verified public evidence, newest first. Every item has its source link and both dates. Last scan: {runs?.[0] ? `${fmtDate(runs[0].started_at)} (${runs[0].status})` : "never"}.</>} />
+      {!items.length && <p className="card-sm p-4 text-sm">No verified signals yet. They appear after the first successful scan. A scan that finds nothing is different from a scan that failed: check Round health.</p>}
       <ul className="space-y-2">
         {items.map((s) => (
-          <li key={s.id} className={`rounded-lg border bg-white p-3 ${s.verification_status === "rejected_by_user" ? "opacity-50" : ""}`}>
+          <li key={s.id} className={`card p-3 ${s.verification_status === "rejected_by_user" ? "opacity-50" : ""}`}>
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <a href={s.source_url} target="_blank" rel="noopener noreferrer" className="font-medium">{s.title}</a>

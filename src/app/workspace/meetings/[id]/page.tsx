@@ -29,7 +29,7 @@ export default async function MeetingBrief({ params }: { params: Promise<{ id: s
         {brief.noEvidenceNote && <p className="text-sm text-slate-500">{brief.noEvidenceNote}</p>}
         <ul className="space-y-2">
           {brief.freshEvidence.map((s, i) => (
-            <li key={i} className="rounded border bg-white p-3 text-sm">
+            <li key={i} className="card-sm p-3 text-sm">
               <a href={s.source_url} target="_blank" rel="noopener noreferrer">{s.title}</a>
               <div className="text-xs text-slate-500">{fmtDate(s.date)} · {s.signal_type.replace(/_/g, " ")} · {s.source_domain} · {s.label}</div>
               <p>{s.evidence_summary}</p>
@@ -63,7 +63,7 @@ export default async function MeetingBrief({ params }: { params: Promise<{ id: s
         {brief.openDiligence.length > 0 && <p className="mt-2 text-sm">Open diligence: {brief.openDiligence.map((d) => d.request_text).join("; ")}</p>}
       </section>
 
-      <section className="mt-8 rounded-lg border border-slate-200 bg-white p-4">
+      <section className="mt-8 card p-4">
         <h2 className="font-semibold">After the meeting</h2>
         <ApiForm url="/api/workspace" className="mt-2 space-y-2" submit="Save notes"
           fields={[{ name: "notes", label: "Your meeting notes", type: "textarea", defaultValue: meeting.notes ?? "" }, { name: "notes_confirmed", label: "These notes are final (builds the follow-up checklist)", type: "checkbox", defaultValue: String(meeting.notes_confirmed) }]}

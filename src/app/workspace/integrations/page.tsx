@@ -1,4 +1,5 @@
 import { ApiButton, ApiForm, Badge } from "@/components/ui";
+import PageHeader from "@/components/shell/PageHeader";
 import ScopePicker from "@/components/ScopePicker";
 import SyncButton from "@/components/SyncButton";
 import { db } from "@/lib/db/client";
@@ -18,7 +19,7 @@ export default async function Integrations({ searchParams }: { searchParams: Pro
   const gm = acct("gmail"), cal = acct("calendar"), hs = acct("hubspot");
 
   const Card = ({ title, blurb, a, children, provider }: { title: string; blurb: string; a: ReturnType<typeof acct>; children: React.ReactNode; provider: "gmail" | "calendar" | "hubspot" }) => (
-    <section className="rounded-lg border border-slate-200 bg-white p-4">
+    <section className="card p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-semibold">{title}</h2>
         {a ? <Badge kind={a.status === "connected" ? "verified" : "warn"}>{a.status}</Badge> : <Badge kind="neutral">not connected</Badge>}
@@ -45,8 +46,7 @@ export default async function Integrations({ searchParams }: { searchParams: Pro
 
   return (
     <main>
-      <h1 className="text-2xl font-bold">Integrations</h1>
-      <p className="mb-4 max-w-3xl text-sm text-slate-600">Each connection asks for the minimum permission it needs, reads only what you select, and can be disconnected or deleted at any time. This app can create Gmail <b>drafts</b>; it has no ability to send.</p>
+      <PageHeader title="Integrations" subtitle={<>Each connection asks for the minimum permission it needs, reads only what you select, and can be disconnected or deleted at any time. This app can create Gmail <b>drafts</b>; it has no ability to send.</>} />
       {sp.connected && <p className="mb-3 rounded bg-emerald-50 p-2 text-sm text-emerald-800">Connected {sp.connected}. Choose what is in scope below, then sync.</p>}
       {sp.error && <p className="mb-3 rounded bg-rose-50 p-2 text-sm text-rose-800">Connection failed: {sp.error}</p>}
 
@@ -103,7 +103,7 @@ export default async function Integrations({ searchParams }: { searchParams: Pro
           )}
         </Card>
 
-        <section className="rounded-lg border border-slate-200 bg-white p-4 text-xs">
+        <section className="card p-4 text-xs">
           <h2 className="text-base font-semibold">Field ownership (CRM sync)</h2>
           <p className="mb-2 text-slate-600">One owner per field. The other side never silently overwrites it.</p>
           <table className="w-full text-left">

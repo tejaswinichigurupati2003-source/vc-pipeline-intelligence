@@ -1,4 +1,5 @@
 import { ApiForm } from "@/components/ui";
+import PageHeader from "@/components/shell/PageHeader";
 import { FIT_ASSUMPTIONS, fitScore } from "@/lib/insights/fit";
 import { DEFAULT_TARGET, ROUND_ASSUMPTIONS, roundHealth } from "@/lib/insights/round-health";
 import { STATUS_LABEL } from "@/lib/view/format";
@@ -17,16 +18,15 @@ export default async function Round() {
 
   return (
     <main className="max-w-3xl">
-      <h1 className="text-2xl font-bold">Round health</h1>
-      <p className="mb-5 text-sm text-slate-600">Coverage and stage distribution of your investor list, with the assumptions behind every number.</p>
+      <PageHeader title="Round overview" subtitle={<>Coverage and stage distribution of your investor list, with the assumptions behind every number.</>} />
 
       <section className="mb-6 grid gap-3 md:grid-cols-4">
         {[["Tracked", h.total], ["Contacted", `${h.contacted} (${h.coveragePct}%)`], ["In conversation", `${h.active} (${h.conversionPct}% of contacted)`], ["Fresh high signals", h.hotNow]].map(([l, v]) => (
-          <div key={String(l)} className="rounded-lg border bg-white p-3"><div className="text-xs text-slate-500">{l}</div><div className="text-xl font-bold">{v}</div></div>
+          <div key={String(l)} className="card p-3"><div className="text-xs text-slate-500">{l}</div><div className="text-xl font-bold">{v}</div></div>
         ))}
       </section>
 
-      <section className="mb-6 rounded-lg border bg-white p-4">
+      <section className="mb-6 card p-4">
         <h2 className="mb-3 font-semibold">Stage distribution</h2>
         {(Object.entries(h.dist) as [string, number][]).map(([k, n]) => (
           <div key={k} className="mb-2"><div className="flex justify-between text-sm"><span>{STATUS_LABEL[k]}</span><span>{n}</span></div>{bar(n)}</div>
@@ -34,7 +34,7 @@ export default async function Round() {
         <p className="mt-2 text-xs text-slate-500">{h.strongFit} investors have a thesis-keyword fit of 70+ (heuristic, see assumptions).</p>
       </section>
 
-      <section className="mb-6 rounded-lg border bg-white p-4">
+      <section className="mb-6 card p-4">
         <h2 className="mb-2 font-semibold">Gaps against your targets</h2>
         {!h.gaps.length ? <p className="text-sm">Targets met.</p> : <ul className="list-disc pl-5 text-sm">{h.gaps.map((g, i) => <li key={i}>{g}</li>)}</ul>}
         <div className="mt-4 grid gap-3 md:grid-cols-2">

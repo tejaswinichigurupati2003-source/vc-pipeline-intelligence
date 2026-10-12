@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Icon from "@/components/shell/Icon";
 
 interface Status {
   run: { id: string; status: string; vcs_targeted: number } | null;
@@ -34,12 +35,13 @@ export default function RefreshControls({ stalled, runId, open }: { stalled: boo
     timer.current = setInterval(async () => {
       const s: Status = await fetch("/api/scan/status", { cache: "no-store" }).then((r) => r.json()).catch(() => ({ run: null }));
       if (!s.run) return;
-      setMsg(`Scanning: ${s.processed ?? 0} of ${s.run.vcs_targeted} VCs`);
+      setMsg(`${s.processed ?? 0}/${s.run.vcs_targeted}`);
       if (s.run.status !== "running") {
         if (timer.current) clearInterval(timer.current);
         setBusy(false);
-        setMsg(`Run ${s.run.status}`);
+        setMsg(s.run.status === "completed" ? "Done" : `Run ${s.run.status}`);
         router.refresh();
+        setTimeout(() => setMsg(""), 6000);
       }
     }, 4000);
   };
@@ -72,23 +74,15 @@ export default function RefreshControls({ stalled, runId, open }: { stalled: boo
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <button
-        onClick={() => call("/api/scan/start")}
-        disabled={busy}
-        className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-      >
-        {busy ? "Refreshing…" : "Refresh"}
-      </button>
+    <div className="flex items-center gap-2">
       {stalled && runId && (
-        <button
-          onClick={() => call("/api/scan/batch", { run_id: runId })}
-          className="rounded-md border border-amber-500 bg-amber-50 px-3 py-2 text-sm text-amber-900"
-        >
-          Resume stalled run
-        </button>
+        <button onClick={() => call("/api/scan/batch", { run_id: runId })} className="btn-ghost !border-amber-300 !bg-amber-50 !text-amber-900">Resume scan</button>
       )}
-      {msg && <span className="text-sm text-slate-600">{msg}</span>}
+      <button onClick={() => call("/api/scan/start")} disabled={busy} className="btn-primary">
+        <Icon name="refresh" className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} />
+        {busy ? "Refreshing" : "Refresh"}
+      </button>
+      {msg && <span className="min-w-12 text-xs font-semibold text-slate-500">{msg}</span>}
     </div>
   );
 }

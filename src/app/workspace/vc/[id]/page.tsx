@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ApiButton, ApiForm, Badge } from "@/components/ui";
 import DraftPanel from "@/components/DraftPanel";
+import InvestorHero from "@/components/InvestorHero";
 import { db } from "@/lib/db/client";
 import { getVcDetail } from "@/lib/db/read";
 import { fitScore } from "@/lib/insights/fit";
@@ -60,29 +61,15 @@ export default async function WorkspaceVc({ params }: { params: Promise<{ id: st
 
   return (
     <main className="max-w-4xl">
-      <Link href="/workspace/pipeline" className="text-sm">&larr; Pipeline</Link>
-      <h1 className="mt-2 text-2xl font-bold">{vc.firm_name}{vc.investor_name !== vc.firm_name && <span className="text-slate-500"> · {vc.investor_name}</span>}</h1>
-      <p className="text-sm text-slate-600">{vc.investment_thesis}</p>
+      <InvestorHero vc={vc} backHref="/workspace/pipeline" backLabel="All investors" />
 
-      <section className="mt-4 grid gap-3 rounded-lg border bg-white p-4 text-sm md:grid-cols-4">
-        <div><div className="text-xs text-slate-500">Timing score</div><div className="text-xl font-bold">{vc.follow_up_score ?? "–"}</div></div>
-        <div><div className="text-xs text-slate-500">Thesis fit (heuristic)</div><div className="text-xl font-bold">{fit.score}</div></div>
-        <div><div className="text-xs text-slate-500">Status</div>{STATUS_LABEL[vc.contact_status]}</div>
-        <div><div className="text-xs text-slate-500">Last checked (good scan)</div>{fmtDate(vc.last_success_at)}</div>
-        <div className="md:col-span-4">
-          <div className="text-xs text-slate-500">Recommended action and why</div>
-          {vc.bucket === "stale" ? <Badge kind="warn">DATA STALE: last refresh failed. This is not the same as quiet.</Badge> : <div>{vc.recommended_action ?? "Not scanned yet"}</div>}
-          <div className="text-xs text-slate-600">{vc.signal_summary}</div>
-          {vc.recommended_action?.startsWith("SKIP") && <div className="mt-1 text-xs text-slate-500">Suppressed because no qualifying public signal was found in the sources we search. That is not proof of inactivity.</div>}
-          {vc.recommended_action?.startsWith("HOLD") && <div className="mt-1 text-xs text-slate-500">Suppressed because you are already waiting for their reply.</div>}
-        </div>
+      <section className="card mb-6 p-5">
+        <h2 className="mb-3">Your private notes</h2>
+        <dl className="grid gap-4 text-[0.9rem] md:grid-cols-2">
+          <div><dt className="eyebrow">Contact history</dt><dd className="mt-1 text-slate-700">{vc.contact_history || "None yet"}</dd></div>
+          <div><dt className="eyebrow">Notes</dt><dd className="mt-1 text-slate-700">{vc.personal_notes || "None yet"}</dd></div>
+        </dl>
       </section>
-
-      <section className="mt-5 rounded-lg border bg-white p-4">
-        <h2 className="font-semibold">Your private notes</h2>
-        <dl className="mt-1 text-sm"><dt className="text-xs text-slate-500">Contact history</dt><dd>{vc.contact_history || "none"}</dd><dt className="mt-1 text-xs text-slate-500">Personal notes</dt><dd>{vc.personal_notes || "none"}</dd></dl>
-      </section>
-
       <DraftPanel vcId={id} />
 
       <section className="mt-6">
@@ -103,7 +90,7 @@ export default async function WorkspaceVc({ params }: { params: Promise<{ id: st
       <section className="mt-6">
         <h2 className="font-semibold">Unified timeline</h2>
         <p className="mb-2 text-xs text-slate-500"><Badge kind="public">Public</Badge> evidence · <Badge kind="private">Private</Badge> connected data · <Badge kind="note">Your note</Badge></p>
-        <ol className="space-y-2">{items.map((i) => <li key={i.key} className="rounded border bg-white p-3">{i.node}</li>)}</ol>
+        <ol className="space-y-2">{items.map((i) => <li key={i.key} className="card-sm p-3">{i.node}</li>)}</ol>
         {!items.length && <p className="text-sm text-slate-500">Nothing yet.</p>}
       </section>
 

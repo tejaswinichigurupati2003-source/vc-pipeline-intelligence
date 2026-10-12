@@ -131,3 +131,23 @@ Set `INTEGRATION_ENC_KEY` (and `APP_URL`) in `.env.local`/Vercel. Gmail and Cale
 
 ### What is and is not verified
 Unit-tested offline: import planner, classifier, commitments, matching, MIME building, encryption/OAuth state, auth/CSRF, allow-lists, ownership guard, today/brief/draft/round logic, intro paths, and the write-boundary and never-send guards. Not exercised against live third-party accounts (needs your credentials): Google OAuth/Gmail/Calendar and HubSpot calls. They follow the documented APIs, but expect to fix small field-level surprises on first connection.
+## Interface
+
+The app is called **Raise**. Layout: a left sidebar, a top bar (round progress meters, search, last-scan status, Refresh) and a kanban board of investors by stage, in the style of fundraising CRMs.
+
+| Sidebar | What it is |
+|---|---|
+| **Today** | A short, prioritised action list with a reason for each, plus "Skipped, and why". |
+| **Round overview** | Coverage, stage distribution and gaps against your targets, with assumptions. |
+| **Investors** | The board (To contact, Awaiting reply, In conversation, Closed). Drag a card to change its stage; filter by signal strength; switch to list view. |
+| **Market signals** | Verified public evidence, newest first. |
+| **Conversations** | Selected email threads, meetings, commitments and your notes. |
+| **Warm intros** | Possible introduction paths from your own contacts. |
+| **Data room** | Approved company claims, documents and investor diligence requests. |
+| **Integrations / Import & export** | Gmail, Calendar, HubSpot; CSV import with dry run, conflicts and undo. |
+
+- The home page (`/`) is the read-only **shared view** of the same board: no drag and drop, no private notes.
+- Stored machine strings (for example `REACH OUT: cite the recent sector signal`) are kept as the spec defines; `src/lib/view/labels.ts` turns them into the product vocabulary ("Reach out", "Check timing", "Hold"...). A failed scan is always shown as *Needs refresh*, never as quiet.
+- Moving a card calls `POST /api/investors/status`, which runs the allow-listed RPC `user_set_contact_status` (`006_stage_move.sql`): it changes `contact_status` only, stamps `last_contact_at` the first time you move an investor to *Awaiting reply*, and never touches notes or the four signal columns.
+- `npm run warm -- http://localhost:3000` pre-compiles every route in dev, which avoids a dev-only `ChunkLoadError` when a page is requested mid-compile.
+- Design tokens live in `tailwind.config.ts` and `src/app/globals.css` (font: Plus Jakarta Sans via `next/font`).

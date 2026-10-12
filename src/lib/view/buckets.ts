@@ -3,15 +3,14 @@ export type Bucket = "reach_out" | "review" | "hold" | "quiet" | "stale" | "clos
 export const BUCKET_ORDER: Bucket[] = ["reach_out", "review", "hold", "quiet", "stale", "unscanned", "closed"];
 
 export const BUCKET_META: Record<Bucket, { title: string; blurb: string }> = {
-  reach_out: { title: "Reach out now", blurb: "Not yet contacted, with a strong, fresh, verified signal." },
-  review: { title: "Review", blurb: "Medium signal, timing to check, or live conversations with something new to reference." },
-  hold: { title: "Hold", blurb: "Already waiting on a reply. Avoid duplicate follow-up." },
-  quiet: { title: "Quiet: skip this week", blurb: "Not found by the system. This is not proof the VC is inactive." },
-  stale: { title: "Data stale: scan failed", blurb: "Refresh failed. Last good values shown. This is not the same as quiet." },
+  reach_out: { title: "Ready to reach out", blurb: "Not contacted yet, with a strong and fresh verified signal." },
+  review: { title: "Worth a look", blurb: "A moderate signal, a timing check, or a live conversation with something new to mention." },
+  hold: { title: "On hold", blurb: "You're already waiting on a reply, so avoid a duplicate follow-up." },
+  quiet: { title: "Quiet this week", blurb: "No qualifying signal found by our searches. That is not proof the investor is inactive." },
+  stale: { title: "Needs a refresh", blurb: "The last scan failed. Showing the last good values; this is not the same as quiet." },
   unscanned: { title: "Not scanned yet", blurb: "No successful scan on record." },
   closed: { title: "Closed", blurb: "Marked closed in your pipeline." },
 };
-
 /** Failed or partial latest scan overrides everything: stale is never presented as quiet. */
 export function bucketFor(row: {
   recommended_action: string | null;
