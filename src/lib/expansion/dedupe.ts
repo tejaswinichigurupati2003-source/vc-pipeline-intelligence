@@ -1,14 +1,9 @@
-import { domainOf, firmNameForms, normText } from "@/lib/discovery/normalize";
+import { domainOf, FIRM_SUFFIXES as SUFFIX, firmNameForms, normText } from "@/lib/discovery/normalize";
 
 /**
  * Same firm under different names must collapse to one key: "Accel", "Accel India" and "Accel Partners" are one investor.
  * Strips legal and generic suffixes after normalising accents and punctuation.
  */
-const SUFFIX = new Set([
-  "ventures", "venture", "partners", "partner", "capital", "fund", "funds", "vc", "management", "advisors", "advisory", "investments", "investment",
-  "india", "group", "llp", "ltd", "pvt", "inc", "labs", "holdings", "the", "global", "asia", "us",
-]);
-
 export function firmKey(name: string): string {
   const words = normText(name).split(" ").filter(Boolean);
   const core = words.filter((w) => !SUFFIX.has(w));

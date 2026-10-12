@@ -1,5 +1,6 @@
 import { db } from "./client";
 import { config } from "@/lib/config";
+import { peopleByVc } from "@/lib/people/store";
 import type { AcceptedSignal, CandidateOutcome, Provider, StoredSignal, VcProfile } from "@/lib/types";
 
 const PROFILE_COLS =
@@ -12,13 +13,16 @@ function unwrap<T>(res: { data: T | null; error: { message: string } | null }, w
 
 /** Scanner-safe profile read: manual notes/history are never selected. */
 export async function listProfiles(): Promise<VcProfile[]> {
-  const rows = unwrap(await db().from("vc_pipeline").select(PROFILE_COLS), "listProfiles");
-  return (rows as VcProfile[]).map((r) => ({ ...r, sector_keywords: r.sector_keywords ?? [], aliases: r.aliases ?? [] }));
+  const [res, people] = await Promise.all([db().from("vc_pipeline").select(PROFILE_COLS), peopleByVc()]);
+  const rows = unwrap(res, "listProfiles");
+  return (rows as VcProfile[]).map((r) => ({ ...r, sector_keywords: r.sector_keywords ?? [], aliases: r.aliases ?? [], people: people.get(r.id) ?? [] }));
 }
 
 export async function getProfile(id: string): Promise<VcProfile | null> {
   const { data } = await db().from("vc_pipeline").select(PROFILE_COLS).eq("id", id).maybeSingle();
-  return data ? { ...(data as VcProfile), sector_keywords: data.sector_keywords ?? [], aliases: data.aliases ?? [] } : null;
+  if (!data) return null;
+  const people = (await peopleByVc()).get(id) ?? [];
+  return { ...(data as VcProfile), sector_keywords: data.sector_keywords ?? [], aliases: data.aliases ?? [], people };
 }
 
 export async function loadSignals(vcId: string): Promise<StoredSignal[]> {

@@ -64,7 +64,7 @@ function InvestorCard({ r, href, draggable, dragging, onDragStart, onDragEnd }: 
         <span className="grid h-9 w-9 shrink-0 place-items-center font-display text-[0.72rem] font-bold" style={avatarStyle(r.firm)}>{initials(r.firm)}</span>
         <div className="min-w-0 flex-1">
           <Link href={href} draggable={false} className="block truncate text-[0.95rem] font-bold text-slate-900 no-underline hover:text-indigo-700 hover:no-underline">{r.firm}</Link>
-          <div className="truncate text-xs text-slate-500">{r.person ?? "Firm-level contact"}</div>
+          <div className="truncate text-xs text-slate-500">{r.via ? `Signal via ${r.via}` : r.person ?? "Firm-level contact"}</div>
         </div>
         <ScoreCell score={r.score} stale={stale} />
       </div>
@@ -78,12 +78,14 @@ function InvestorCard({ r, href, draggable, dragging, onDragStart, onDragEnd }: 
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
         <Chip tone={a.tone} title={a.hint}>{a.label}</Chip>
         {r.relState && <Chip tone={r.relState.confirmed ? "info" : "muted"} title={r.relState.confirmed ? "You confirmed this" : "Detected from email. Confirm it in Conversations."}>{STATE_LABEL[r.relState.state as RelationshipState]}{r.relState.confirmed ? "" : "?"}</Chip>}
+        {!stale && (r.momentum === "rising" || r.momentum === "new") && <Chip tone="go" title="More verified activity recently than their usual pace">{r.momentum === "new" ? "New activity" : "Speeding up"}</Chip>}
+        {!stale && r.momentum === "cooling" && <Chip tone="caution" title="Less verified activity than their usual pace">Cooling</Chip>}
         {r.rulesOnly && <Chip tone="muted" title="A limited check was used for this investor">Basic scan</Chip>}
       </div>
 
       <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-2.5 text-[0.72rem] text-slate-500">
         {r.source ? (
-          <a href={r.source.url} target="_blank" rel="noopener noreferrer" draggable={false} className="inline-flex max-w-[60%] items-center gap-1 truncate font-semibold text-slate-500 no-underline hover:text-indigo-700 hover:no-underline"><Icon name="link" className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{r.source.domain}</span></a>
+          <span className="inline-flex max-w-[62%] items-center gap-1.5 truncate"><a href={r.source.url} target="_blank" rel="noopener noreferrer" draggable={false} className="inline-flex max-w-[60%] items-center gap-1 truncate font-semibold text-slate-500 no-underline hover:text-indigo-700 hover:no-underline"><Icon name="link" className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{r.source.domain}</span></a>{r.sources > 0 && <Link href={`${href}#why`} draggable={false} title="See every source behind this score" className="shrink-0 border border-slate-300 px-1 font-bold text-slate-600 no-underline hover:border-slate-900 hover:no-underline">{r.sources} source{r.sources === 1 ? "" : "s"}</Link>}</span>
         ) : <span className="inline-flex items-center gap-1"><Icon name="clock" className="h-3.5 w-3.5" />{r.lastSignal ? `Last signal ${timeAgo(r.lastSignal)}` : "No signal yet"}</span>}
         <span title="How well their thesis matches yours">FIT <b className="text-slate-800">{r.fit}</b></span>
       </div>
@@ -105,7 +107,9 @@ export default function Board({ rows, editable, detailBase, initialQuery = "" }:
     const needle = q.trim().toLowerCase();
     const list = data.filter((r) => matches(r, filter) && (!needle || `${r.firm} ${r.person ?? ""}`.toLowerCase().includes(needle)));
     const key = (r: BoardRow) => (sort === "name" ? 0 : sort === "recent" ? (r.lastSignal ? new Date(r.lastSignal).getTime() : 0) : (r.score ?? -1));
-    return [...list].sort((a, b) => (sort === "name" ? a.firm.localeCompare(b.firm) : key(b) - key(a)));
+    const mom = (r: BoardRow) => (r.momentum === "rising" ? 2 : r.momentum === "new" ? 1.5 : r.momentum === "steady" ? 1 : r.momentum === "cooling" ? 0.5 : 0);
+    // Equal strength: investors speeding up come first.
+    return [...list].sort((a, b) => (sort === "name" ? a.firm.localeCompare(b.firm) : key(b) - key(a) || mom(b) - mom(a)));
   }, [data, q, filter, sort]);
 
   const counts = useMemo(() => Object.fromEntries(FILTERS.map((f) => [f.key, data.filter((r) => matches(r, f.key)).length])), [data]);

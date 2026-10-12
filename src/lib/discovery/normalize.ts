@@ -54,6 +54,19 @@ export function firmNameForms(firm: string): string[] {
   return [...forms].filter((f) => f.length >= 3);
 }
 
+/** Words that follow a firm's distinctive name ("Lightspeed India Partners" -> "Lightspeed"). */
+const FIRM_SUFFIX = new Set(["ventures", "venture", "partners", "partner", "capital", "fund", "funds", "vc", "management", "advisors", "advisory", "investments", "investment", "india", "group", "llp", "ltd", "pvt", "inc", "labs", "holdings", "the", "global", "asia", "us"]);
+export const FIRM_SUFFIXES = FIRM_SUFFIX;
+
+/** The distinctive part of a firm name as written (original capitalisation), or null when nothing is left to shorten. */
+export function firmCore(firm: string): string | null {
+  const words = firm.replace(/\([^)]*\)/, " ").split(/\s+/).map((w) => w.replace(/[^\p{L}\p{N}&.-]/gu, "")).filter(Boolean);
+  const core = words.filter((w) => !FIRM_SUFFIX.has(w.toLowerCase()));
+  if (!core.length || core.length === words.length) return null;
+  const s = core.join(" ");
+  return s.length >= 5 ? s : null;
+}
+
 export function investorIsFirmName(vc: Pick<VcProfile, "investor_name" | "firm_name">): boolean {
   return normText(vc.investor_name) === normText(vc.firm_name);
 }
@@ -72,7 +85,12 @@ export function mentionsEntity(text: string, vc: VcProfile): boolean {
     const ln = lastName(vc.investor_name);
     if (ln && ln.length >= 4) names.push(ln); // bare last name only when distinctive enough
   }
-  return names.some((n) => n && t.includes(" " + n + " "));
+  for (const p of vc.people ?? []) { const n = normText(p.name); if (n.split(" ").length >= 2) names.push(n); } // associated partners, full name only
+  if (names.some((n) => n && t.includes(" " + n + " "))) return true;
+  // Headlines say "Lightspeed", not "Lightspeed India Partners": match the distinctive part, capitalised as a name.
+  const core = firmCore(vc.firm_name);
+  const esc = core ? core.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : "";
+  return !!core && new RegExp(`(^|[^\\p{L}\\p{N}])${esc}([^\\p{L}\\p{N}]|$)`, "u").test(text);
 }
 
 export interface PrefilterResult {
@@ -82,7 +100,7 @@ export interface PrefilterResult {
 
 type Raw = Omit<Candidate, "id">;
 
-export function prefilter(c: Raw, vc: VcProfile, now: Date, knownCanonical: Set<string>): PrefilterResult {
+export function prefilter(c: Raw, vc: VcProfile, now: Date, knownCanonical: Set<string>, maxAgeDays: number = config.lookbackDays): PrefilterResult {
   if (isBlockedDomain(c.sourceDomain)) return { keep: false, reason: "blocked domain" };
   if (knownCanonical.has(c.canonicalUrl)) return { keep: false, reason: "already stored" };
   if (!mentionsEntity(`${c.title} ${c.snippet} ${c.url}`, vc)) {
@@ -92,7 +110,7 @@ export function prefilter(c: Raw, vc: VcProfile, now: Date, knownCanonical: Set<
     const d = new Date(c.providerDate);
     if (!isNaN(d.getTime())) {
       const ageDays = (now.getTime() - d.getTime()) / 86_400_000;
-      if (ageDays > config.lookbackDays + 3) return { keep: false, reason: "older than lookback window" };
+      if (ageDays > maxAgeDays + 3) return { keep: false, reason: "older than lookback window" };
     }
   }
   return { keep: true };
@@ -109,7 +127,8 @@ export function dedupeAndRank<T extends Raw>(cands: T[], vc: VcProfile, max: num
   const rank = (c: Raw) => {
     const primary = c.isFeedItem || (fd && (c.sourceDomain === fd || c.sourceDomain.endsWith("." + fd)));
     const t = c.providerDate ? new Date(c.providerDate).getTime() : 0;
-    return (primary ? 1e15 : 0) + (isNaN(t) ? 0 : t);
+    // Items that name the investor in the headline first, then the firm's own site or feed, then the newest.
+    return (mentionsEntity(c.title, vc) ? 2e15 : 0) + (primary ? 1e15 : 0) + (isNaN(t) ? 0 : t);
   };
   return [...byUrl.values()].sort((a, b) => rank(b) - rank(a)).slice(0, max);
 }

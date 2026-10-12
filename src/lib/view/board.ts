@@ -17,6 +17,10 @@ export interface BoardRow {
   fit: number;
   relState: { state: string; confirmed: boolean } | null;
   lastContact: string | null;
+  /** Verified sources in the last 30 days, activity direction, and the partner a source is about. */
+  sources: number;
+  momentum: string;
+  via: string | null;
 }
 
 export function toBoardRows(rows: PipelineRow[], states: Record<string, { state: string; confirmed: boolean }> = {}): BoardRow[] {
@@ -35,6 +39,9 @@ export function toBoardRows(rows: PipelineRow[], states: Record<string, { state:
     fit: fitScore({ investment_thesis: r.investment_thesis, sector_keywords: [], firm_name: r.firm_name }).score,
     relState: states[r.id] ?? null,
     lastContact: r.last_contact_at,
+    sources: r.evidence?.sources30d ?? 0,
+    momentum: r.evidence?.momentum ?? "none",
+    via: r.top_signal?.person ?? null,
   }));
 }
 

@@ -3,7 +3,10 @@ import { config } from "@/lib/config";
 import { applyPipelineSignalUpdate } from "@/lib/db/pipeline-writer";
 import { insertCandidates, insertSignals, loadSignals, type CandidateLog } from "@/lib/db/store";
 import { buildQueries } from "@/lib/discovery/query-builder";
-import { dedupeAndRank, prefilter } from "@/lib/discovery/normalize";
+import { dedupeAndRank, investorIsFirmName, prefilter } from "@/lib/discovery/normalize";
+import { attributePerson, extractPeople, type FoundPerson } from "@/lib/people/extract";
+import { addPeople } from "@/lib/people/store";
+import { needsBackfill, recordScoreHistory } from "@/lib/signals/history";
 import { fetchPage } from "@/lib/discovery/fetch-page";
 import { langSearch } from "@/lib/providers/langsearch";
 import { googleNews } from "@/lib/providers/google-news-rss";
@@ -44,23 +47,23 @@ export async function scanVc(vc: VcProfile, ctx: RunContext): Promise<VcScanResu
   const t0 = Date.now();
   const phase = (name: string) => { if (process.env.SCAN_DEBUG) console.log(`[scan] ${vc.firm_name}: ${name} at +${((Date.now() - t0) / 1000).toFixed(1)}s`); };
   const logs: CandidateLog[] = [];
-  const existing = await loadSignals(vc.id);
+  const [existing, backfill] = await Promise.all([loadSignals(vc.id), needsBackfill(vc.id, now)]);
   const knownEventKeys = new Set(existing.map((s) => s.event_key));
   const knownCanonical = new Set(existing.map((s) => s.canonical_url));
 
   // ---- Discovery ---------------------------------------------------------------------------
-  const planned = buildQueries(vc);
+  const planned = buildQueries(vc, { backfill });
   const raw: RawCand[] = [];
   const errors: string[] = [];
   let queries = 0;
   let succeeded = 0;
 
-  const shortlistSize = () => dedupeAndRank(raw, vc, 99).filter((c) => prefilter(c, vc, now, knownCanonical).keep).length;
+  const shortlistSize = () => dedupeAndRank(raw, vc, 99).filter((c) => prefilter(c, vc, now, knownCanonical, config.historyDays).keep).length;
 
   const runQuery = async (q: (typeof planned)[number]) => {
     queries++;
     try {
-      raw.push(...(q.provider === "langsearch" ? await langSearch(q.query) : await googleNews(q.query)));
+      raw.push(...(q.provider === "langsearch" ? await langSearch(q.query, 10, q.freshness ?? "oneMonth") : await googleNews(q.query)));
       succeeded++;
     } catch (e) {
       errors.push(`${q.id}: ${(e as Error).message}`);
@@ -84,11 +87,11 @@ export async function scanVc(vc: VcProfile, ctx: RunContext): Promise<VcScanResu
   // ---- Normalise + prefilter ---------------------------------------------------------------
   const kept: RawCand[] = [];
   for (const c of dedupeAndRank(raw, vc, 999)) {
-    const pf = prefilter(c, vc, now, knownCanonical);
+    const pf = prefilter(c, vc, now, knownCanonical, config.historyDays);
     if (pf.keep) kept.push(c);
     else logs.push(log(c, "rejected_prefilter", pf.reason ?? null));
   }
-  const shortlist: Candidate[] = dedupeAndRank(kept, vc, config.maxCandidatesPerVc).map((c, i) => ({ ...c, id: `c${i + 1}` }));
+  const shortlist: Candidate[] = dedupeAndRank(kept, vc, config.maxCandidatesPerVc + (backfill ? 4 : 0)).map((c, i) => ({ ...c, id: `c${i + 1}` }));
   for (const c of kept) if (!shortlist.some((s) => s.canonicalUrl === c.canonicalUrl)) logs.push(log(c, "rejected_prefilter", "over per-VC candidate cap"));
 
   // ---- Fetch pages -------------------------------------------------------------------------
@@ -119,11 +122,17 @@ export async function scanVc(vc: VcProfile, ctx: RunContext): Promise<VcScanResu
 
   // ---- Classify (one Gemini call) or rules-only --------------------------------------------
   const accepted: AcceptedSignal[] = [];
-  const vctx = (c: Candidate) => ({ vc, candidate: c, runStartedAt: ctx.startedAt, knownEventKeys });
+  const vctx = (c: Candidate) => ({ vc, candidate: c, runStartedAt: ctx.startedAt, knownEventKeys, windowDays: config.historyDays });
+  // People tied to this investor: the founder's row, anyone already known, and anyone named with a role in this scan's evidence.
+  const known: { name: string; role: string | null }[] = [...(investorIsFirmName(vc) ? [] : [{ name: vc.investor_name, role: null }]), ...(vc.people ?? [])];
+  const foundPeople = new Map<string, { person: FoundPerson; url: string }>();
   const record = (c: Candidate, r: ValidationResult) => {
     logs.push(log(c, r.outcome, r.reason));
     if (r.outcome === "accepted" && r.signal && !accepted.some((a) => a.event_key === r.signal!.event_key)) {
-      accepted.push(r.signal);
+      const text = pages.get(c.id)?.text ?? "";
+      for (const p of extractPeople(text, vc.firm_name, vc.aliases)) if (!foundPeople.has(p.name)) { foundPeople.set(p.name, { person: p, url: c.url }); known.push({ name: p.name, role: p.role }); }
+      const who = attributePerson(`${r.signal.title} ${r.signal.evidence_summary} ${r.signal.evidence_quote ?? ""}`, known);
+      accepted.push(who ? { ...r.signal, person_name: who.name, person_role: who.role } : r.signal);
       knownEventKeys.add(r.signal.event_key);
     } else if (r.outcome === "accepted") {
       logs[logs.length - 1] = log(c, "duplicate", "same event as another candidate in this scan");
@@ -192,12 +201,18 @@ export async function scanVc(vc: VcProfile, ctx: RunContext): Promise<VcScanResu
     };
   }
 
+  // People found in this scan's evidence, and the investor named on the founder's row, join the associated-people list.
+  await addPeople(vc.id, [...foundPeople.values()].map((f) => f.person), "signal", null).catch(() => undefined);
+  if (!investorIsFirmName(vc)) await addPeople(vc.id, [{ name: vc.investor_name, role: null }], "investor_row", null).catch(() => undefined);
+
   await applyPipelineSignalUpdate(vc.id, {
     last_signal_date: latestSignalDate(all),
     signal_summary: buildSignalSummary(all, score),
     follow_up_score: score.score,
     recommended_action: recommendAction(score.band, vc.contact_status, vc.last_contact_at, now),
   });
+
+  await recordScoreHistory({ vcId: vc.id, runId: ctx.runId, score: score.score, counted: score.items.filter((i) => i.counted).length, signals: all, now, backfilled: backfill });
 
   return {
     status: inWindow ? "success" : "no_verified_signal",

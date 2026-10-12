@@ -30,8 +30,8 @@ export function parseDate(s: string | null | undefined): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
-export function cutoffFor(runStartedAt: Date): Date {
-  return new Date(runStartedAt.getTime() - config.lookbackDays * DAY);
+export function cutoffFor(runStartedAt: Date, windowDays: number = config.lookbackDays): Date {
+  return new Date(runStartedAt.getTime() - windowDays * DAY);
 }
 
 export function sourceTier(c: Candidate, vc: VcProfile): SourceTier {
@@ -46,6 +46,8 @@ interface Ctx {
   candidate: Candidate;
   runStartedAt: Date;
   knownEventKeys: Set<string>;
+  /** How far back an event may be and still be stored (default: the scoring window). Scoring itself still counts only the last 30 days. */
+  windowDays?: number;
 }
 
 /** Date used for the 30-day test, by signal type (spec 9.3). */
@@ -91,7 +93,7 @@ export function validateClassification(
   if (conflict) return { outcome: "needs_review", reason: "conflicting dates between page metadata and text" };
   if (!date) return { outcome: "needs_review", reason: cls.signal_type === "event_appearance" ? "no event date found" : "no usable date" };
 
-  const cutoff = cutoffFor(ctx.runStartedAt);
+  const cutoff = cutoffFor(ctx.runStartedAt, ctx.windowDays);
   if (date < cutoff) return { outcome: "rejected_stale", reason: `dated ${date.toISOString().slice(0, 10)}, before ${cutoff.toISOString().slice(0, 10)}` };
   if (date.getTime() > ctx.runStartedAt.getTime() + 2 * DAY && cls.signal_type !== "event_appearance") {
     return { outcome: "needs_review", reason: "date is in the future" };
@@ -137,7 +139,7 @@ export function validateRulesOnly(c: Candidate, ctx: Ctx): ValidationResult {
   if (!m.ok) return { outcome: "rejected_prefilter", reason: "rules-only: needs name + action word + sector keyword" };
   const date = parseDate(c.providerDate);
   if (!date) return { outcome: "needs_review", reason: "rules-only: no dated item" };
-  if (date < cutoffFor(ctx.runStartedAt)) return { outcome: "rejected_stale", reason: "rules-only: outside window" };
+  if (date < cutoffFor(ctx.runStartedAt, ctx.windowDays)) return { outcome: "rejected_stale", reason: "rules-only: outside window" };
   const key = eventKey({ vc, signalType: m.signalType, keyText: c.title, date });
   if (ctx.knownEventKeys.has(key)) return { outcome: "duplicate", reason: "same event already recorded" };
   return {

@@ -19,6 +19,7 @@ CONTEXT
 Founder's company: B2B logistics / supply-chain SaaS, Seed stage, India.
 Target investor: {{investor_name}} at {{firm_name}} (website: {{firm_domain}}).
 Known aliases: {{aliases}}.
+People associated with the firm: {{people}}.
 Investor thesis (from the founder's notes): {{thesis}}.
 Sector keywords: {{sector_keywords}}.
 Run date: {{run_date}}. Use it ONLY to convert relative phrases such as "3 days ago" into a date.
@@ -40,6 +41,7 @@ RULES
   Never guess dates, names, amounts or relationships.
 - A name mention, team or bio page, directory listing, or evergreen article is NOT a signal:
   use general_mention and relevance_score <= 0.2.
+- A statement or action by one of the associated people, in their role at the firm, is about the target investor: entity_match = true.
 - Keep the person, the firm and portfolio companies distinct. A different person with the
   same name means entity_match = false.
 - A portfolio investment shows firm activity. It does not show interest in the founder's
@@ -95,6 +97,7 @@ export function buildSystemInstruction(vc: VcProfile, runDate: Date): string {
     .replace("{{firm_name}}", vc.firm_name)
     .replace("{{firm_domain}}", vc.firm_domain ?? "unknown")
     .replace("{{aliases}}", vc.aliases.join(", ") || "none")
+    .replace("{{people}}", (vc.people ?? []).map((p) => (p.role ? `${p.name} (${p.role})` : p.name)).join(", ") || "none known")
     .replace("{{thesis}}", vc.investment_thesis ?? "not provided")
     .replace("{{sector_keywords}}", vc.sector_keywords.join(", "))
     .replace("{{run_date}}", runDate.toISOString().slice(0, 10));

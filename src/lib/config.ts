@@ -5,6 +5,8 @@ const num = (v: string | undefined, d: number) => {
 
 export const config = {
   lookbackDays: num(process.env.LOOKBACK_DAYS, 30),
+  /** Older verified events are kept for the time series. Only the last lookbackDays count toward the score. */
+  historyDays: num(process.env.HISTORY_DAYS, 180),
   maxQueriesPerVc: num(process.env.MAX_QUERIES_PER_VC, 4),
   maxCandidatesPerVc: num(process.env.MAX_CANDIDATES_PER_VC, 6),
   batchSize: num(process.env.BATCH_SIZE, 4),

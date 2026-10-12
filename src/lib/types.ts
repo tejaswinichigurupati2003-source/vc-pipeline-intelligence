@@ -13,6 +13,8 @@ export interface VcProfile {
   investment_thesis: string | null;
   sector_keywords: string[];
   aliases: string[];
+  /** Partners and team associated with the firm (from signals, the investor row, or added by the founder). */
+  people?: { name: string; role: string | null }[];
   contact_status: ContactStatus;
   last_contact_at: string | null;
 }
@@ -83,6 +85,9 @@ export interface AcceptedSignal {
   relevance_score: number;
   confidence: Confidence;
   event_key: string;
+  /** The associated person this signal is about, when one is named in the evidence. */
+  person_name?: string | null;
+  person_role?: string | null;
 }
 
 /** A stored signal row as the scorer sees it. */

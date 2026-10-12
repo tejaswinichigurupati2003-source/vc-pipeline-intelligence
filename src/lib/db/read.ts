@@ -1,6 +1,7 @@
 import { db } from "./client";
 import { bucketFor, type Bucket } from "@/lib/view/buckets";
 import { scoreSignals, type ScoreResult } from "@/lib/scoring/score";
+import { computeTrend, type Momentum } from "@/lib/signals/timeseries";
 import type { StoredSignal } from "@/lib/types";
 
 export interface PipelineRow {
@@ -23,7 +24,9 @@ export interface PipelineRow {
   latest_item_error: string | null;
   latest_scan_mode: string | null;
   last_success_at: string | null;
-  top_signal: { title: string; source_url: string; source_domain: string; date: string | null } | null;
+  top_signal: { title: string; source_url: string; source_domain: string; date: string | null; person: string | null } | null;
+  /** Verified sources in the last 30 days, and how activity is moving over the last 6 months. */
+  evidence: { sources30d: number; momentum: Momentum };
   bucket: Bucket;
 }
 
@@ -45,7 +48,7 @@ export async function getPipeline(includePrivate = false): Promise<PipelineRow[]
       .order("finished_at", { ascending: false })
       .limit(2000),
     db().from("vc_signals")
-      .select("vc_id, title, source_url, source_domain, event_at, published_at, verification_status")
+      .select("vc_id, title, source_url, source_domain, event_at, published_at, verification_status, signal_type, relevance_score, confidence, event_key, person_name")
       .eq("verification_status", "accepted"),
   ]);
   if (error) throw new Error(error.message);
@@ -57,13 +60,16 @@ export async function getPipeline(includePrivate = false): Promise<PipelineRow[]
   }
 
   const top = new Map<string, PipelineRow["top_signal"]>();
-  let bestDate = new Map<string, number>();
+  const bestDate = new Map<string, number>();
+  const byVc = new Map<string, StoredSignal[]>();
+  const nowD = new Date();
   for (const s of sigs ?? []) {
+    byVc.set(s.vc_id, [...(byVc.get(s.vc_id) ?? []), s as unknown as StoredSignal]);
     const d = s.event_at ?? s.published_at;
     const t = d ? new Date(d).getTime() : 0;
     if (t >= (bestDate.get(s.vc_id) ?? -1)) {
       bestDate.set(s.vc_id, t);
-      top.set(s.vc_id, { title: s.title, source_url: s.source_url, source_domain: s.source_domain, date: d });
+      top.set(s.vc_id, { title: s.title, source_url: s.source_url, source_domain: s.source_domain, date: d, person: s.person_name ?? null });
     }
   }
 
@@ -77,9 +83,22 @@ export async function getPipeline(includePrivate = false): Promise<PipelineRow[]
       latest_scan_mode: l?.scan_mode ?? null,
       last_success_at: lastOk.get(id) ?? null,
       top_signal: top.get(id) ?? null,
+      evidence: evidenceOf(byVc.get(id) ?? [], nowD),
     } as Omit<PipelineRow, "bucket">;
     return { ...row, bucket: bucketFor(row) } as PipelineRow;
   });
+}
+
+function evidenceOf(sigs: StoredSignal[], now: Date): PipelineRow["evidence"] {
+  const seen = new Set<string>();
+  let sources30d = 0;
+  for (const s of sigs) {
+    const d = s.event_at ?? s.published_at;
+    if (!d || seen.has(s.event_key)) continue;
+    seen.add(s.event_key);
+    if (s.confidence !== "low" && (now.getTime() - new Date(d).getTime()) / 86_400_000 <= 30) sources30d++;
+  }
+  return { sources30d, momentum: computeTrend(sigs, now).momentum };
 }
 
 export interface VcDetail {

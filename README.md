@@ -153,3 +153,10 @@ Flat and hard-edged: zero border radius, 1px crisp borders, no soft shadows (hov
 - Stored machine strings (for example `REACH OUT: cite the recent sector signal`) are kept as the spec defines; `src/lib/view/labels.ts` turns them into product vocabulary ("Reach out", "Check timing", "Hold"). A failed scan is always shown as *Needs refresh*, never as quiet.
 - Moving a card calls `POST /api/investors/status` (allow-listed RPC `user_set_contact_status`, migration `006_stage_move.sql`): it changes `contact_status` only, stamps `last_contact_at` the first time you move an investor to *Awaiting reply*, and never touches notes or the four signal columns.
 - `npm run warm -- http://localhost:3000` pre-compiles every route in dev, avoiding a dev-only `ChunkLoadError` when a page is requested mid-compile.
+## Evidence you can check: trend, people, and sources
+
+- **Time series.** Verified events are kept for 180 days (the score still counts only the last 30). Each investor page shows weekly activity for six months, a momentum label (speeding up, steady, cooling, new), their usual rhythm, and the score after every scan. Trend explains the score; it never changes it. An extra one-year search runs about monthly per investor to fill the history.
+- **People.** Partners named with their role at a firm in an accepted source are saved with the exact sentence that ties them to it. Up to two are also searched by name each scan, and a signal about one of them is labelled "via". Founders can add or remove people on the investor page.
+- **Explainable signals.** "Why this score" lists every source with its date, the arithmetic behind its points, a verbatim quote, and the checks it passed, plus what was left out and why.
+
+Migration `008_people_and_history.sql` adds `vc_people` and `vc_score_history` and two nullable columns on `vc_signals`.

@@ -3,12 +3,14 @@ import { notFound } from "next/navigation";
 import { ApiButton, ApiForm, Badge } from "@/components/ui";
 import DraftPanel from "@/components/DraftPanel";
 import InvestorHero from "@/components/InvestorHero";
+import WhyScore from "@/components/WhyScore";
+import { listPeople } from "@/lib/people/store";
+import { loadHistory } from "@/lib/signals/history";
 import { db } from "@/lib/db/client";
 import { getVcDetail } from "@/lib/db/read";
 import { fitScore } from "@/lib/insights/fit";
 import { pathsForVc } from "@/lib/intros/service";
 import { buildDraftForVc } from "@/lib/workspace/drafts";
-import { signalDate } from "@/lib/scoring/score";
 import { STATE_LABEL, type RelationshipState } from "@/lib/relationships/classify";
 import { fmtDate, fmtDateTime, STATUS_LABEL } from "@/lib/view/format";
 
@@ -19,7 +21,7 @@ type Item = { at: number; node: React.ReactNode; key: string };
 export default async function WorkspaceVc({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   // Everything this page needs is independent of everything else: fetch it in one round trip.
-  const [d, { data: events }, { data: meetings }, { data: commitments }, { data: dd }, { data: contacts }, paths, suggested] = await Promise.all([
+  const [d, { data: events }, { data: meetings }, { data: commitments }, { data: dd }, { data: contacts }, paths, suggested, people, history] = await Promise.all([
     getVcDetail(id, true), // private notes allowed
     db().from("relationship_events").select("*").eq("vc_id", id),
     db().from("calendar_events").select("*").eq("vc_id", id),
@@ -28,25 +30,14 @@ export default async function WorkspaceVc({ params }: { params: Promise<{ id: st
     db().from("vc_contacts").select("id, person_name, email").eq("vc_id", id).order("created_at"),
     pathsForVc(id),
     buildDraftForVc(id),
+    listPeople(id),
+    loadHistory(id),
   ]);
   if (!d) notFound();
   const { vc, score } = d;
   const fit = fitScore({ investment_thesis: vc.investment_thesis, sector_keywords: [], firm_name: vc.firm_name });
 
   const items: Item[] = [];
-  // Public evidence (blue)
-  for (const it of score.items) {
-    const s = it.signal; const t = signalDate(s)?.getTime() ?? 0;
-    items.push({ key: `s${s.id}`, at: t, node: (
-      <div className={it.counted ? "" : "opacity-60"}>
-        <div className="flex flex-wrap items-center gap-2"><Badge kind="public">Public</Badge><Badge kind={s.confidence === "high" ? "verified" : "inferred"}>{s.confidence === "high" ? "Verified" : "Verified, medium"}</Badge>
-          <a href={s.source_url} target="_blank" rel="noopener noreferrer" className="font-medium">{s.title}</a></div>
-        <div className="text-xs text-slate-500">{fmtDate(new Date(t).toISOString())} · {s.signal_type.replace(/_/g, " ")} · {s.source_domain} · {it.counted ? `+${it.contribution.toFixed(1)} pts` : it.note ?? "not scored"}</div>
-        <p className="text-sm">{s.evidence_summary}</p>
-        {s.verification_status === "accepted" && <div className="mt-1"><ApiButton url={`/api/vc/${id}`} method="PATCH" body={{ signal_id: s.id }} label="This signal is wrong" tone="danger" /></div>}
-        {s.verification_status === "rejected_by_user" && <Badge kind="warn">You marked this wrong</Badge>}
-      </div>) });
-  }
   // Private connected (violet) + your notes (green)
   for (const e of events ?? []) {
     items.push({ key: `e${e.id}`, at: new Date(e.occurred_at).getTime(), node: (
@@ -68,6 +59,8 @@ export default async function WorkspaceVc({ params }: { params: Promise<{ id: st
   return (
     <main className="max-w-4xl">
       <InvestorHero vc={vc} backHref="/investors" backLabel="All investors" />
+
+      <WhyScore vcId={id} firm={vc.firm_name} score={score} signals={d.signals} history={history} people={people} now={new Date()} />
 
       <section className="card mb-6 p-5">
         <h2 className="mb-3">Your private notes</h2>
@@ -115,7 +108,7 @@ export default async function WorkspaceVc({ params }: { params: Promise<{ id: st
 
       <section className="mt-6">
         <h2 className="font-semibold">Unified timeline</h2>
-        <p className="mb-2 text-xs text-slate-500"><Badge kind="public">Public</Badge> evidence · <Badge kind="private">Private</Badge> connected data · <Badge kind="note">Your note</Badge></p>
+        <p className="mb-2 text-xs text-slate-500"><Badge kind="private">Private</Badge> connected data · <Badge kind="note">Your note</Badge></p>
         <ol className="space-y-2">{items.map((i) => <li key={i.key} className="card-sm p-3">{i.node}</li>)}</ol>
         {!items.length && <p className="text-sm text-slate-500">Nothing yet.</p>}
       </section>
