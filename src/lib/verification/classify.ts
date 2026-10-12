@@ -76,12 +76,21 @@ const geminiSlots = pLimit(4);
 
 const defaultGenerate: Generate = (model, system, user) => geminiSlots(() => generateOnce(model, system, user));
 
+/**
+ * Classification needs little model "thinking" (the answers are re-checked by code), and a lower level is much faster:
+ * "low" gave the same verdicts in a third of the time. GEMINI_THINKING = low (default) | medium | high | off.
+ */
+const thinking = () => {
+  const level = (process.env.GEMINI_THINKING ?? "low").toLowerCase();
+  return level === "off" || level === "default" ? {} : { thinkingConfig: { thinkingLevel: level.toUpperCase() as never } };
+};
+
 const generateOnce: Generate = async (model, system, user) => {
-  const ai = new GoogleGenAI({ apiKey: requireEnv("GEMINI_API_KEY") });
+  const ai = new GoogleGenAI({ apiKey: requireEnv("GEMINI_API_KEY"), httpOptions: { timeout: 45_000 } });
   const res = await ai.models.generateContent({
     model,
     contents: user,
-    config: { systemInstruction: system, temperature: 0.1, responseMimeType: "application/json", responseSchema },
+    config: { systemInstruction: system, temperature: 0.1, responseMimeType: "application/json", responseSchema, ...thinking() },
   });
   return res.text ?? "{}";
 };

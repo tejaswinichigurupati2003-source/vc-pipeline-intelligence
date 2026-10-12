@@ -61,7 +61,10 @@ export async function assertSafeUrl(raw: string): Promise<URL> {
   }
   let addrs: { address: string }[];
   try {
-    addrs = await lookup(host, { all: true });
+    addrs = await Promise.race([
+      lookup(host, { all: true }),
+      new Promise<never>((_, rej) => setTimeout(() => rej(new Error("dns timeout")), 4000)),
+    ]);
   } catch {
     throw new FetchError("dns", `DNS lookup failed for ${host}`);
   }

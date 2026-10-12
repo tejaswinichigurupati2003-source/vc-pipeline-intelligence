@@ -41,6 +41,8 @@ type RawCand = Omit<Candidate, "id">;
 /** Full per-VC pipeline. A failed/partial-without-evidence scan NEVER calls the RPC: old values stay. */
 export async function scanVc(vc: VcProfile, ctx: RunContext): Promise<VcScanResult> {
   const now = new Date();
+  const t0 = Date.now();
+  const phase = (name: string) => { if (process.env.SCAN_DEBUG) console.log(`[scan] ${vc.firm_name}: ${name} at +${((Date.now() - t0) / 1000).toFixed(1)}s`); };
   const logs: CandidateLog[] = [];
   const existing = await loadSignals(vc.id);
   const knownEventKeys = new Set(existing.map((s) => s.event_key));
@@ -71,6 +73,7 @@ export async function scanVc(vc: VcProfile, ctx: RunContext): Promise<VcScanResu
   if (q3 && shortlistSize() < 3) await runQuery(q3); // spec 7.3: skip if the first queries already gave enough
   errors.push(...feed.errors);
 
+  phase(`discovery done (${raw.length} raw results)`);
   if (queries > 0 && succeeded === 0 && feed.items.length === 0) {
     return {
       status: "failed", scanMode: "llm", queries, candidates: 0, accepted: 0, llmCalls: 0,
@@ -111,6 +114,7 @@ export async function scanVc(vc: VcProfile, ctx: RunContext): Promise<VcScanResu
   };
   const pageLimit = pLimit(3);
   await Promise.all(shortlist.map((c) => pageLimit(() => fetchOne(c))));
+  phase(`pages fetched (${shortlist.length} candidates)`);
   const usable = shortlist.filter((c) => pages.get(c.id)!.text !== "");
 
   // ---- Classify (one Gemini call) or rules-only --------------------------------------------
@@ -170,6 +174,7 @@ export async function scanVc(vc: VcProfile, ctx: RunContext): Promise<VcScanResu
     }
   }
 
+  phase(`classified ${JSON.stringify(logs.reduce((h: Record<string, number>, l) => ({ ...h, [l.outcome]: (h[l.outcome] ?? 0) + 1 }), {}))}`);
   // ---- Persist evidence, then score + write four columns ----------------------------------
   await insertSignals(vc.id, accepted);
   await insertCandidates(ctx.runId, vc.id, logs);
