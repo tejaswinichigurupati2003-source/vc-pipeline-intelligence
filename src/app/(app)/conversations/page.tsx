@@ -10,12 +10,14 @@ export const dynamic = "force-dynamic";
 const stateOptions = RELATIONSHIP_STATES.map((s) => ({ value: s, label: STATE_LABEL[s] }));
 
 export default async function Timeline() {
-  const { data: vcs } = await db().from("vc_pipeline").select("id, firm_name").order("firm_name");
+  const [{ data: vcs }, { data: events }, { data: commitments }, { data: meetings }] = await Promise.all([
+    db().from("vc_pipeline").select("id, firm_name").order("firm_name"),
+    db().from("relationship_events").select("*").order("occurred_at", { ascending: false }).limit(150),
+    db().from("commitments").select("*").in("status", ["proposed", "open"]).order("due_at", { ascending: true }),
+    db().from("calendar_events").select("*").gte("start_at", new Date(Date.now() - 14 * 86_400_000).toISOString()).order("start_at", { ascending: true }),
+  ]);
   const name = new Map((vcs ?? []).map((v) => [v.id, v.firm_name]));
   const vcOptions = (vcs ?? []).map((v) => ({ value: v.id, label: v.firm_name }));
-  const { data: events } = await db().from("relationship_events").select("*").order("occurred_at", { ascending: false }).limit(150);
-  const { data: commitments } = await db().from("commitments").select("*").in("status", ["proposed", "open"]).order("due_at", { ascending: true });
-  const { data: meetings } = await db().from("calendar_events").select("*").gte("start_at", new Date(Date.now() - 14 * 86_400_000).toISOString()).order("start_at", { ascending: true });
   const unmatched = (events ?? []).filter((e) => !e.vc_id);
 
   return (

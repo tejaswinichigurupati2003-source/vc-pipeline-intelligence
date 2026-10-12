@@ -17,14 +17,17 @@ type Item = { at: number; node: React.ReactNode; key: string };
 
 export default async function WorkspaceVc({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const d = await getVcDetail(id, true); // admin-gated layout: private notes allowed
+  // Everything this page needs is independent of everything else: fetch it in one round trip.
+  const [d, { data: events }, { data: meetings }, { data: commitments }, { data: dd }, paths] = await Promise.all([
+    getVcDetail(id, true), // private notes allowed
+    db().from("relationship_events").select("*").eq("vc_id", id),
+    db().from("calendar_events").select("*").eq("vc_id", id),
+    db().from("commitments").select("*").eq("vc_id", id).in("status", ["proposed", "open"]),
+    db().from("diligence_requests").select("*").eq("vc_id", id),
+    pathsForVc(id),
+  ]);
   if (!d) notFound();
   const { vc, score } = d;
-  const { data: events } = await db().from("relationship_events").select("*").eq("vc_id", id);
-  const { data: meetings } = await db().from("calendar_events").select("*").eq("vc_id", id);
-  const { data: commitments } = await db().from("commitments").select("*").eq("vc_id", id).in("status", ["proposed", "open"]);
-  const { data: dd } = await db().from("diligence_requests").select("*").eq("vc_id", id);
-  const paths = await pathsForVc(id);
   const fit = fitScore({ investment_thesis: vc.investment_thesis, sector_keywords: [], firm_name: vc.firm_name });
 
   const items: Item[] = [];

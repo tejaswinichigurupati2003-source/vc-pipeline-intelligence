@@ -8,11 +8,13 @@ import { getSettings } from "@/lib/workspace/data";
 export const dynamic = "force-dynamic";
 
 export default async function Materials() {
-  const s = await getSettings();
-  const { data: materials } = await db().from("materials").select("*").order("created_at", { ascending: false });
-  const { data: vcs } = await db().from("vc_pipeline").select("id, firm_name").order("firm_name");
+  const [s, { data: materials }, { data: vcs }, { data: dd }] = await Promise.all([
+    getSettings(),
+    db().from("materials").select("*").order("created_at", { ascending: false }),
+    db().from("vc_pipeline").select("id, firm_name").order("firm_name"),
+    db().from("diligence_requests").select("*").order("created_at", { ascending: false }),
+  ]);
   const name = new Map((vcs ?? []).map((v) => [v.id, v.firm_name]));
-  const { data: dd } = await db().from("diligence_requests").select("*").order("created_at", { ascending: false });
   const approved = (materials ?? []).filter((m) => m.approved).length;
   const open = (dd ?? []).filter((d) => d.status !== "provided").length;
 

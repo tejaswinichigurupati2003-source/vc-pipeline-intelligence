@@ -21,12 +21,19 @@ function Meter({ label, value, target }: { label: string; value: number; target:
 
 /** The one app frame: fixed sidebar, top bar with round progress, search and refresh. */
 export default async function AppShell({ children }: { children: React.ReactNode }) {
-  const [{ data: statuses }, run, { data: settingsRows }, proposed] = await Promise.all([
+  const load = () => Promise.all([
     db().from("vc_pipeline").select("contact_status"),
     latestRun(),
     db().from("app_settings").select("key, value"),
     db().from("commitments").select("id", { count: "exact", head: true }).eq("status", "proposed"),
   ]);
+  let [{ data: statuses, error: e1 }, run, { data: settingsRows, error: e2 }, proposed] = await load();
+  if (e1 || e2) {
+    // One retry: transient errors (clock skew, cold connection) usually clear on their own.
+    await new Promise((r) => setTimeout(r, 1500));
+    [{ data: statuses, error: e1 }, run, { data: settingsRows, error: e2 }, proposed] = await load();
+    if (e1 || e2) throw new Error(`database unavailable: ${(e1 ?? e2)!.message}`);
+  }
   const settings = Object.fromEntries((settingsRows ?? []).map((r) => [r.key, r.value])) as Record<string, string>;
   const all = statuses ?? [];
   const contacted = all.filter((r) => r.contact_status !== "yet_to_reach_out").length;

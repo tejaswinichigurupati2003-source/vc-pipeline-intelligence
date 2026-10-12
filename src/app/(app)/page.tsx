@@ -25,10 +25,12 @@ function Stat({ label, value, hint }: { label: string; value: number; hint: stri
 }
 
 export default async function Today() {
-  const [rows, states, settings, run] = await Promise.all([pipeline(), getStates(), getSettings(), latestRun()]);
-  const { data: commitments } = await db().from("commitments").select("id, vc_id, text, due_at, status, who");
-  const { data: meetings } = await db().from("calendar_events").select("id, vc_id, title, start_at, notes_confirmed, followup_done, included");
-  const { data: fb } = await db().from("user_feedback").select("target_id, created_at").eq("target_type", "action").eq("verdict", "dismissed").order("created_at", { ascending: true });
+  const [rows, states, settings, run, { data: commitments }, { data: meetings }, { data: fb }] = await Promise.all([
+    pipeline(), getStates(), getSettings(), latestRun(),
+    db().from("commitments").select("id, vc_id, text, due_at, status, who"),
+    db().from("calendar_events").select("id, vc_id, title, start_at, notes_confirmed, followup_done, included"),
+    db().from("user_feedback").select("target_id, created_at").eq("target_type", "action").eq("verdict", "dismissed").order("created_at", { ascending: true }),
+  ]);
   const dismissed = Object.fromEntries((fb ?? []).map((f) => [f.target_id, f.created_at]));
 
   const today = buildToday({

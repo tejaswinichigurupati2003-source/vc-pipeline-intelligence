@@ -36,15 +36,19 @@ const PUBLIC_COLS =
  */
 export async function getPipeline(includePrivate = false): Promise<PipelineRow[]> {
   const cols = includePrivate ? `${PUBLIC_COLS}, contact_history, personal_notes` : PUBLIC_COLS;
-  const { data: vcs, error } = await db().from("vc_pipeline").select(cols).order("follow_up_score", { ascending: false, nullsFirst: false });
+  // The three reads are independent: run them together (one round trip instead of three).
+  const [{ data: vcs, error }, { data: items }, { data: sigs }] = await Promise.all([
+    db().from("vc_pipeline").select(cols).order("follow_up_score", { ascending: false, nullsFirst: false }),
+    db().from("signal_run_items")
+      .select("vc_id, status, scan_mode, error_message, finished_at, started_at")
+      .neq("status", "running")
+      .order("finished_at", { ascending: false })
+      .limit(2000),
+    db().from("vc_signals")
+      .select("vc_id, title, source_url, source_domain, event_at, published_at, verification_status")
+      .eq("verification_status", "accepted"),
+  ]);
   if (error) throw new Error(error.message);
-
-  const { data: items } = await db()
-    .from("signal_run_items")
-    .select("vc_id, status, scan_mode, error_message, finished_at, started_at")
-    .neq("status", "running")
-    .order("finished_at", { ascending: false })
-    .limit(2000);
   const latest = new Map<string, { status: string; scan_mode: string; error_message: string | null }>();
   const lastOk = new Map<string, string>();
   for (const i of items ?? []) {
@@ -52,10 +56,6 @@ export async function getPipeline(includePrivate = false): Promise<PipelineRow[]
     if ((i.status === "success" || i.status === "no_verified_signal") && i.finished_at && !lastOk.has(i.vc_id)) lastOk.set(i.vc_id, i.finished_at);
   }
 
-  const { data: sigs } = await db()
-    .from("vc_signals")
-    .select("vc_id, title, source_url, source_domain, event_at, published_at, verification_status")
-    .eq("verification_status", "accepted");
   const top = new Map<string, PipelineRow["top_signal"]>();
   let bestDate = new Map<string, number>();
   for (const s of sigs ?? []) {
@@ -91,16 +91,16 @@ export interface VcDetail {
 }
 
 export async function getVcDetail(id: string, includePrivate = false): Promise<VcDetail | null> {
-  const rows = await getPipeline(includePrivate);
+  const [rows, { data: signals }, { data: rejected }, { data: runs }] = await Promise.all([
+    getPipeline(includePrivate),
+    db().from("vc_signals").select("*").eq("vc_id", id),
+    db().from("signal_candidates").select("url, title, provider, outcome, reason, created_at")
+      .eq("vc_id", id).neq("outcome", "accepted").order("created_at", { ascending: false }).limit(40),
+    db().from("signal_run_items").select("run_id, status, scan_mode, signals_accepted, error_message, finished_at")
+      .eq("vc_id", id).order("started_at", { ascending: false }).limit(10),
+  ]);
   const vc = rows.find((r) => r.id === id);
   if (!vc) return null;
-  const { data: signals } = await db().from("vc_signals").select("*").eq("vc_id", id);
-  const { data: rejected } = await db()
-    .from("signal_candidates").select("url, title, provider, outcome, reason, created_at")
-    .eq("vc_id", id).neq("outcome", "accepted").order("created_at", { ascending: false }).limit(40);
-  const { data: runs } = await db()
-    .from("signal_run_items").select("run_id, status, scan_mode, signals_accepted, error_message, finished_at")
-    .eq("vc_id", id).order("started_at", { ascending: false }).limit(10);
   const st = (signals ?? []) as StoredSignal[];
   return { vc, signals: st, score: scoreSignals(st, new Date()), rejected: rejected ?? [], runs: runs ?? [] };
 }

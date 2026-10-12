@@ -7,12 +7,14 @@ import { fmtDate } from "@/lib/view/format";
 export const dynamic = "force-dynamic";
 
 export default async function Signals() {
-  const { data } = await db().from("vc_signals").select("id, vc_id, title, source_url, source_domain, source_tier, signal_type, published_at, event_at, relevance_score, confidence, evidence_basis, evidence_summary, verification_status, date_basis")
-    .neq("verification_status", "superseded").order("created_at", { ascending: false }).limit(300);
-  const { data: vcs } = await db().from("vc_pipeline").select("id, firm_name");
+  const [{ data }, { data: vcs }, { data: runs }] = await Promise.all([
+    db().from("vc_signals").select("id, vc_id, title, source_url, source_domain, source_tier, signal_type, published_at, event_at, relevance_score, confidence, evidence_basis, evidence_summary, verification_status, date_basis")
+    .neq("verification_status", "superseded").order("created_at", { ascending: false }).limit(300),
+    db().from("vc_pipeline").select("id, firm_name"),
+    db().from("signal_runs").select("started_at, status").order("started_at", { ascending: false }).limit(1),
+  ]);
   const name = new Map((vcs ?? []).map((v) => [v.id, v.firm_name]));
   const items = (data ?? []).map((s) => ({ ...s, when: s.event_at ?? s.published_at })).sort((a, b) => new Date(b.when ?? 0).getTime() - new Date(a.when ?? 0).getTime());
-  const { data: runs } = await db().from("signal_runs").select("started_at, status").order("started_at", { ascending: false }).limit(1);
 
   return (
     <main>
