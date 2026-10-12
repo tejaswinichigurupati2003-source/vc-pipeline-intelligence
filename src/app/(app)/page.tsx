@@ -49,7 +49,7 @@ export default async function Today() {
           <div className="text-[0.66rem] font-semibold uppercase tracking-[0.14em] text-white/60">{new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}</div>
           <h1 className="mt-2 !text-[1.9rem] !text-white">{greeting}</h1>
           <p className="mt-2 max-w-xl text-[0.95rem] leading-relaxed text-white/75">
-            {today.total ? <>You have <b className="text-white">{today.total}</b> things worth doing{today.total > today.shown ? `; here are the top ${today.shown}` : ""}. Each one says why, and where the evidence came from.</> : "Nothing needs your attention right now."}
+            {today.total ? <>You have <b className="text-white">{today.total}</b> things worth doing{today.total > today.shown ? `; here are the top ${today.shown}` : ""}. Ranked by what matters most.</> : "Nothing needs your attention right now."}
           </p>
         </div>
         <div className="relative z-10 grid grid-cols-2 divide-x divide-white/20 border-t border-white/20 xl:grid-cols-4">
@@ -66,7 +66,7 @@ export default async function Today() {
             <div className="card grid place-items-center p-12 text-center">
               <span className="mb-3 grid h-12 w-12 place-items-center border border-slate-900 grad-cherry text-white"><Icon name="check" className="h-6 w-6" /></span>
               <h2>You&apos;re all caught up</h2>
-              <p className="mt-2 max-w-sm text-sm text-slate-500">Refresh to look for new investor signals, or connect Gmail and Calendar so replies and meetings show up here.</p>
+              <p className="mt-2 max-w-sm text-sm text-slate-500">Refresh to check for new investor news, or connect Gmail and Calendar to see replies and meetings here.</p>
             </div>
           )}
           {groups.map(([type, list]) => (
@@ -88,7 +88,7 @@ export default async function Today() {
                       <p className="mt-0.5 text-[0.85rem] leading-snug text-slate-500">{a.reason}</p>
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                         <Badge kind={a.provenance === "verified" ? "verified" : a.provenance === "inferred" ? "inferred" : "confirmed"}>
-                          {a.provenance === "verified" ? "Verified evidence" : a.provenance === "inferred" ? "Inferred: confirm it" : "From your data"}
+                          {a.provenance === "verified" ? "Verified" : a.provenance === "inferred" ? "Needs your OK" : "From your data"}
                         </Badge>
                         {a.sourceUrl && <a href={a.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-semibold"><Icon name="link" className="h-3.5 w-3.5" />Source</a>}
                         {a.vcId && states[a.vcId] && <span>{STATE_LABEL[states[a.vcId].state as RelationshipState]} · {timeAgo(states[a.vcId].at)}</span>}
@@ -112,17 +112,15 @@ export default async function Today() {
                   <dt>When</dt><dd className="text-right text-slate-700">{timeAgo(run.finished_at ?? run.started_at)}</dd>
                   <dt>Investors</dt><dd className="text-right text-slate-700">{run.vcs_succeeded} of {run.vcs_targeted}</dd>
                   <dt>Signals found</dt><dd className="text-right text-slate-700">{run.signals_accepted}</dd>
-                  <dt>Gemini calls</dt><dd className="text-right text-slate-700">{run.llm_calls}</dd>
                 </dl>
               ) : <p className="text-sm text-slate-500">No scan yet. Press Refresh in the top bar.</p>}
-              <p className="mt-3 border-t border-slate-200 pt-3 text-xs leading-relaxed text-slate-400">Quiet means nothing qualifying was found in the sources we search; it is not proof an investor is inactive.</p>
             </div>
           </section>
 
           <section className="card">
             <h2 className="border-b border-slate-900 bg-slate-50 px-4 py-3">Skipped, and why</h2>
             <div className="p-4">
-              <p className="mb-3 text-xs text-slate-500">So you can trust what is not on your list.</p>
+              <p className="mb-3 text-xs text-slate-500">Investors we left off, and why.</p>
               <ul className="scroll-thin max-h-[26rem] space-y-3 overflow-y-auto pr-1">
                 {today.suppressed.slice(0, 14).map((s, i) => (
                   <li key={i} className="border-l-2 border-slate-300 pl-3 text-[0.82rem] leading-snug text-slate-600"><b className="text-slate-800">{s.firm || "Item"}</b><br />{s.reason}</li>

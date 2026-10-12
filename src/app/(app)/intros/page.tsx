@@ -20,13 +20,13 @@ export default async function Intros() {
 
   return (
     <main>
-      <PageHeader title="Warm intros" subtitle={<>Possible routes from you to an investor, built only from relationships <b>you</b> provide or approve. Appearing on the same email or event is weak evidence, so those edges start unconfirmed, capped at low confidence, and never count as actionable until you confirm them. Nothing here comes from anyone else&apos;s data.</>} />
+      <PageHeader title="Warm intros" subtitle="Routes from you to an investor through people you know. Confirm a connection to make it count." />
 
       <section className="mb-6 grid gap-6 md:grid-cols-2">
         <div className="card p-4">
           <h2 className="font-semibold">1. Add your contacts</h2>
-          <p className="mb-2 text-xs text-slate-500">Paste a CSV you choose to share. Columns: name, email, company, relationship (knows/worked_with/introduced), confidence (0-1), vc_firm (works at a tracked firm), portfolio_of (founded a company that firm backed), note.</p>
-          <ApiForm url="/api/intros" fields={[{ name: "csv", label: "Contacts CSV", type: "textarea", required: true, placeholder: "name,email,company,relationship,portfolio_of\nAsha Rao,asha@example.com,TruckLens,knows,Blume Ventures" }]} extra={{ action: "contacts_csv" }} submit="Import contacts" />
+          <p className="mb-2 text-xs text-slate-500">Paste a list of people you know as CSV. Columns: name, email, company, relationship, works at (the investor they work at), backed by (the investor that backed their company).</p>
+          <ApiForm url="/api/intros" fields={[{ name: "csv", label: "Contacts CSV", type: "textarea", required: true, placeholder: "name,email,company,relationship,backed by\nAsha Rao,asha@example.com,TruckLens,knows,Blume Ventures" }]} extra={{ action: "contacts_csv" }} submit="Import contacts" />
           <div className="mt-3"><ApiForm url="/api/intros" className="flex items-end gap-2" fields={[{ name: "label", label: "Your name in the graph", required: true, defaultValue: founder?.label ?? "" }]} extra={{ action: "set_founder" }} submit="Set" /></div>
         </div>
         <div className="card p-4">
@@ -41,7 +41,7 @@ export default async function Intros() {
       </section>
 
       <h2 className="mb-2 font-semibold">Possible paths ({withPaths.length})</h2>
-      {!withPaths.length && <p className="text-sm text-slate-500">No paths yet. Import contacts that connect to a tracked firm (vc_firm or portfolio_of).</p>}
+      {!withPaths.length && <p className="text-sm text-slate-500">No routes yet. Add contacts who work at, or are backed by, an investor you track.</p>}
       <ul className="mb-8 space-y-3">
         {withPaths.map(({ v, paths }) => {
           const p = paths[0];

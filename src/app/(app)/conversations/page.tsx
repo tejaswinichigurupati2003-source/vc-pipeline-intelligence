@@ -20,12 +20,12 @@ export default async function Timeline() {
 
   return (
     <main>
-      <PageHeader title="Conversations" subtitle={<>Meetings, selected email threads, commitments and your own notes. <Badge kind="private">Private connected data</Badge> <Badge kind="note">Your note</Badge> are kept visually separate from public evidence.</>} />
+      <PageHeader title="Conversations" subtitle="Email threads, meetings, commitments and your own notes, in one place." />
 
       {unmatched.length > 0 && (
         <section className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-4">
           <h2 className="font-semibold">Unmatched threads ({unmatched.length})</h2>
-          <p className="mb-2 text-xs text-slate-600">We could not tell which investor these belong to. Assign them (this also teaches future matching) or leave them.</p>
+          <p className="mb-2 text-xs text-slate-600">Which investor are these from? Assign them and future messages will match automatically.</p>
           <ul className="space-y-2">
             {unmatched.map((e) => (
               <li key={e.id} className="flex flex-wrap items-center gap-3 text-sm">
@@ -47,7 +47,7 @@ export default async function Timeline() {
               <div>{c.text}</div>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                 <span>{name.get(c.vc_id) ?? "Unassigned"} · due {fmtDate(c.due_at)} · {c.who === "founder" ? "you owe" : "investor owes"}</span>
-                {c.status === "proposed" ? <Badge kind="inferred">Proposed from email: confirm</Badge> : <Badge kind="confirmed">Confirmed</Badge>}
+                {c.status === "proposed" ? <Badge kind="inferred">Suggested from email</Badge> : <Badge kind="confirmed">Confirmed</Badge>}
                 {c.status === "proposed" && <ApiButton url="/api/workspace" body={{ entity: "commitment", op: "update", id: c.id, values: { status: "open" } }} label="Confirm" />}
                 <ApiButton url="/api/workspace" body={{ entity: "commitment", op: "update", id: c.id, values: { status: "done" } }} label="Done" />
                 <ApiButton url="/api/workspace" body={{ entity: "commitment", op: "update", id: c.id, values: { status: "dismissed" } }} label="Not a commitment" tone="quiet" />
@@ -90,7 +90,7 @@ export default async function Timeline() {
                 {e.provenance === "user" ? <Badge kind="note">Your note</Badge> : <Badge kind="private">{e.provenance === "gmail" ? "Gmail (selected label)" : "Calendar"}</Badge>}
                 <Link href={`/investors/${e.vc_id}`}>{name.get(e.vc_id)}</Link>
                 <span className="text-xs text-slate-500">{fmtDateTime(e.occurred_at)}</span>
-                {e.state && <Badge kind={e.state_confidence === "user_confirmed" ? "confirmed" : "inferred"}>{STATE_LABEL[e.state as keyof typeof STATE_LABEL]}{e.state_confidence === "user_confirmed" ? "" : " (inferred)"}</Badge>}
+                {e.state && <Badge kind={e.state_confidence === "user_confirmed" ? "confirmed" : "inferred"}>{STATE_LABEL[e.state as keyof typeof STATE_LABEL]}{e.state_confidence === "user_confirmed" ? "" : " (suggested)"}</Badge>}
               </div>
               <div className="mt-1">{e.link_url ? <a href={e.link_url} target="_blank" rel="noopener noreferrer">{e.title}</a> : e.title}</div>
               {e.summary && <div className="text-xs text-slate-500">{e.summary}</div>}

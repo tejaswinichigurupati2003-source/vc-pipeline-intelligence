@@ -18,7 +18,7 @@ export default async function Materials() {
 
   return (
     <main>
-      <PageHeader title="Data room" subtitle={<>Drafts and meeting briefs only ever use claims you have <b>approved</b>. Document readiness: {approved} approved item(s), {open} open investor request(s).</>} />
+      <PageHeader title="Data room" subtitle="Company facts and documents used in your drafts and meeting briefs. Only approved items are used." />
 
       <section className="mb-8 card">
         <h2 className="border-b border-slate-900 bg-slate-50 px-4 py-3">Company profile <span className="font-sans text-[0.72rem] normal-case tracking-normal text-slate-500">used in drafts and briefs</span></h2>
@@ -41,7 +41,7 @@ export default async function Materials() {
             <li key={m.id} className="card-sm p-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
                 <b>{m.title}</b> <Badge kind="neutral">{m.kind}</Badge>
-                {m.approved ? <Badge kind="confirmed">Approved {fmtDate(m.approved_at)}</Badge> : <Badge kind="inferred">Not approved: excluded from drafts</Badge>}
+                {m.approved ? <Badge kind="confirmed">Approved {fmtDate(m.approved_at)}</Badge> : <Badge kind="inferred">Not approved</Badge>}
                 <ApiButton url="/api/workspace" body={{ entity: "materials", op: "update", id: m.id, values: { approved: !m.approved } }} label={m.approved ? "Revoke approval" : "Approve"} />
                 <ApiButton url="/api/workspace" body={{ entity: "materials", op: "delete", id: m.id }} label="Delete" tone="danger" confirm="Delete this item?" />
               </div>

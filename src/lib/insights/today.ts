@@ -45,7 +45,7 @@ export function buildToday(i: TodayInput): { actions: TodayAction[]; suppressed:
     return !!t && i.now.getTime() - new Date(t).getTime() < DISMISS_DAYS * DAY;
   };
   const push = (a: TodayAction) => {
-    if (dismissedRecently(a.key)) { suppressed.push({ vcId: a.vcId ?? "", firm: vcName.get(a.vcId ?? "") ?? "", reason: `Dismissed by you in the last ${DISMISS_DAYS} days: ${a.title}` }); return; }
+    if (dismissedRecently(a.key)) { suppressed.push({ vcId: a.vcId ?? "", firm: vcName.get(a.vcId ?? "") ?? "", reason: `You dismissed this recently: ${a.what}` }); return; }
     all.push(a);
   };
 
@@ -86,7 +86,7 @@ export function buildToday(i: TodayInput): { actions: TodayAction[]; suppressed:
   for (const v of i.vcs) {
     const fam = `outreach:${v.id}`;
     if (v.bucket === "closed") { suppressed.push({ vcId: v.id, firm: v.firm_name, reason: "Closed." }); continue; }
-    if (v.bucket === "stale") { suppressed.push({ vcId: v.id, firm: v.firm_name, reason: "Last scan failed: not shown as quiet or active until a refresh succeeds." }); continue; }
+    if (v.bucket === "stale") { suppressed.push({ vcId: v.id, firm: v.firm_name, reason: "We couldn't check this investor on the last refresh." }); continue; }
     if (claimed.has(v.id) && v.contact_status !== "yet_to_reach_out") continue;
     if (v.bucket === "reach_out" && v.contact_status === "yet_to_reach_out") {
       push({ key: `reach:${v.id}`, type: "reach_out", vcId: v.id, title: `Reach out to ${v.firm_name}`, firm: v.firm_name, what: "Reach out and cite their recent signal", priority: 50 + Math.round((v.follow_up_score ?? 0) / 4), // max 75: never outranks a due commitment (90) or a reply (100)
@@ -99,18 +99,18 @@ export function buildToday(i: TodayInput): { actions: TodayAction[]; suppressed:
         push({ key: `follow:${v.id}`, type: "follow_up", vcId: v.id, title: `Follow up with ${v.firm_name}`, firm: v.firm_name, what: "Follow up", priority: 40 + Math.min(20, Math.round(since - followAfter)),
           reason: `No reply logged in ${Math.floor(since)}d since your last contact (${new Date(v.last_contact_at!).toISOString().slice(0, 10)}).`, provenance: "user_confirmed" });
       } else {
-        suppressed.push({ vcId: v.id, firm: v.firm_name, reason: since === null ? "Awaiting a reply; no contact date recorded." : `Awaiting a reply; only ${Math.floor(since)}d since last contact (follow up after ${followAfter}d).` });
+        suppressed.push({ vcId: v.id, firm: v.firm_name, reason: since === null ? "Waiting on a reply; no contact date recorded." : `Waiting on a reply (${Math.floor(since)} days so far). A follow-up is suggested after ${followAfter} days.` });
       }
       continue;
     }
-    if (v.bucket === "quiet") suppressed.push({ vcId: v.id, firm: v.firm_name, reason: "Quiet: no verified public trigger in 30 days (not proof of inactivity)." });
-    else if (v.bucket === "review") suppressed.push({ vcId: v.id, firm: v.firm_name, reason: "Medium signal: check thesis/stage fit first, so not promoted to an action." });
+    if (v.bucket === "quiet") suppressed.push({ vcId: v.id, firm: v.firm_name, reason: "No recent public signal." });
+    else if (v.bucket === "review") suppressed.push({ vcId: v.id, firm: v.firm_name, reason: "A moderate signal. Check fit before reaching out." });
     void fam;
   }
 
   all.sort((a, b) => b.priority - a.priority);
   const actions = all.slice(0, max);
-  for (const a of all.slice(max)) suppressed.push({ vcId: a.vcId ?? "", firm: vcName.get(a.vcId ?? "") ?? "", reason: `Lower priority than today's ${max} (${ACTION_LABEL[a.type]}: ${a.title}).` });
+  for (const a of all.slice(max)) suppressed.push({ vcId: a.vcId ?? "", firm: vcName.get(a.vcId ?? "") ?? "", reason: `Lower priority than today's top ${max}.` });
   return { actions, suppressed: suppressed.slice(0, 40), shown: actions.length, total: all.length };
 }
 

@@ -22,8 +22,8 @@ export function LoginForm() {
         try { await postJson("/api/auth/login", { token }); router.refresh(); } catch (x) { setErr((x as Error).message); }
       }}
     >
-      <h1 className="!text-xl">Workspace login</h1>
-      <p className="text-sm text-slate-600">This area holds private notes and connected account data. Enter your admin token.</p>
+      <h1 className="!text-xl">Sign in</h1>
+      <p className="text-sm text-slate-600">Enter your access token to continue.</p>
       <input name="token" type="password" autoComplete="current-password" placeholder="Admin token" />
       <button className="btn-primary w-full">Sign in</button>
       {err && <p className="text-sm text-rose-700">{err}</p>}

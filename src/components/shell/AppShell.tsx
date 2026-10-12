@@ -12,7 +12,7 @@ const num = (v: string | undefined, d: number) => (Number.isFinite(Number(v)) &&
 function Meter({ label, value, target }: { label: string; value: number; target: number }) {
   const pct = Math.min(100, Math.round((value / Math.max(1, target)) * 100));
   return (
-    <div className="min-w-[10rem]" title={`${label}: ${value} of ${target} (targets are editable in Round overview)`}>
+    <div className="min-w-[10rem]" title={`${label}: ${value} of ${target}`}>
       <div className="mb-1 flex items-baseline justify-between gap-3 text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-slate-500"><span>{label}</span><span className="text-slate-900">{value}<span className="text-slate-400">/{target}</span></span></div>
       <div className="h-2 border border-slate-900 bg-white"><div className="h-full grad-cherry" style={{ width: `${pct}%` }} /></div>
     </div>
@@ -89,7 +89,6 @@ export default async function AppShell({ children }: { children: React.ReactNode
           </div>
         </header>
         <div className="mx-auto max-w-[1500px] px-5 py-7 lg:px-8">{children}</div>
-        {open && <p className="mx-5 mb-6 border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 lg:mx-8">Login is switched off (<code>WORKSPACE_AUTH=off</code>): anyone who can open this URL can read your notes and use connected accounts.</p>}
       </div>
     </div>
   );

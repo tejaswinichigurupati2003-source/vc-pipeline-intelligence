@@ -5,6 +5,11 @@ export const TARGET_FIELDS = [
   "contact_status", "last_contact_at", "contact_history", "personal_notes", "email", "profile_url",
 ] as const;
 export type TargetField = (typeof TARGET_FIELDS)[number];
+/** Plain-language names for the fields shown in the import screens. */
+export const FIELD_LABEL: Record<string, string> = {
+  investor_name: "Investor name", firm_name: "Firm", firm_domain: "Website", investment_thesis: "Thesis", sector_keywords: "Sectors",
+  contact_status: "Stage", last_contact_at: "Last contact", contact_history: "Contact history", personal_notes: "Notes", email: "Email", profile_url: "Profile link",
+};
 export type Mapping = Partial<Record<TargetField, string>>; // target field -> CSV header
 
 const SYNONYMS: Record<TargetField, string[]> = {

@@ -62,7 +62,14 @@ export async function addEdge(e: {
  * Edges from a user-supplied export are user_supplied + confirmed + actionable: the founder is stating the relationship.
  */
 export async function importContactsCsv(csv: string) {
-  const rows = parseCsv(csv);
+  // Accept friendly headers ("Works at", "Backed by") as well as the original names.
+  const norm = (k: string) => k.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+  const rows = parseCsv(csv).map((r) => {
+    const o = Object.fromEntries(Object.entries(r).map(([k, v]) => [norm(k), v])) as Record<string, string>;
+    o.vc_firm ||= o.works_at || o.firm || o.investor || "";
+    o.portfolio_of ||= o.backed_by || o.portfolio || "";
+    return o;
+  });
   const founder = await ensureFounderNode();
   const { data: vcs } = await db().from("vc_pipeline").select("id, firm_name");
   const byFirm = new Map((vcs ?? []).map((v) => [normText(v.firm_name), v]));

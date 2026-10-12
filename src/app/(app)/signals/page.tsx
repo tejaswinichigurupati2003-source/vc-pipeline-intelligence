@@ -16,8 +16,8 @@ export default async function Signals() {
 
   return (
     <main>
-      <PageHeader title="Market signals" subtitle={<>Verified public evidence, newest first. Every item has its source link and both dates. Last scan: {runs?.[0] ? `${fmtDate(runs[0].started_at)} (${runs[0].status})` : "never"}.</>} />
-      {!items.length && <p className="card-sm p-4 text-sm">No verified signals yet. They appear after the first successful scan. A scan that finds nothing is different from a scan that failed: check Round health.</p>}
+      <PageHeader title="Market signals" subtitle="Verified news and activity from the investors you track, newest first." />
+      {!items.length && <p className="card p-6 text-sm text-slate-500">No signals yet. Refresh to look for investor news.</p>}
       <ul className="space-y-2">
         {items.map((s) => (
           <li key={s.id} className={`card p-3 ${s.verification_status === "rejected_by_user" ? "opacity-50" : ""}`}>

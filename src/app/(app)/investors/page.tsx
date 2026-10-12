@@ -12,7 +12,7 @@ export default async function InvestorsPage({ searchParams }: { searchParams: Pr
     <>
       <PageHeader
         title="Investors"
-        subtitle="Every investor you track, by stage. Signal strength comes from verified public evidence in the last 30 days; drag a card to update its stage."
+        subtitle="All your investors by stage. Drag a card to move it."
       />
       <Board rows={toBoardRows(rows, states)} editable detailBase="/workspace/vc" initialQuery={q ?? ""} />
     </>

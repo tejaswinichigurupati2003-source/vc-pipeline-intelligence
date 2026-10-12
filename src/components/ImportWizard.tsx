@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { postJson } from "./ui";
+import { FIELD_LABEL } from "@/lib/importer/mapping";
 
 const FIELDS = ["investor_name", "firm_name", "firm_domain", "investment_thesis", "sector_keywords", "contact_status", "last_contact_at", "contact_history", "personal_notes", "email", "profile_url"];
 
@@ -38,7 +39,7 @@ export default function ImportWizard() {
           const text = await f.text(); setCsv(text); setFilename(f.name); await preview(text);
         }} />
       </label>
-      <p className="mt-1 text-xs text-slate-500">Nothing is written until you press Import. Existing rows are never overwritten: blanks are filled, differences become conflicts for you to resolve.</p>
+      <p className="mt-1 text-xs text-slate-500">Nothing is imported until you confirm. Existing details are never overwritten; differences are shown for you to decide.</p>
 
       {prev && (
         <>
@@ -46,7 +47,7 @@ export default function ImportWizard() {
           <div className="mt-2 grid gap-2 md:grid-cols-3">
             {FIELDS.map((f) => (
               <label key={f} className="text-xs">
-                <span className="text-slate-500">{f}</span>
+                <span className="text-slate-500">{FIELD_LABEL[f] ?? f}</span>
                 <select value={mapping[f] ?? ""} onChange={(e) => { const m = { ...mapping }; if (e.target.value) m[f] = e.target.value; else delete m[f]; setMapping(m); }} className="mt-1 w-full rounded border px-1 py-1 text-sm">
                   <option value="">(not in file)</option>
                   {prev.headers.map((h) => <option key={h} value={h}>{h}</option>)}
@@ -74,8 +75,8 @@ export default function ImportWizard() {
                     <td className="p-1">{r.action}{r.matchBasis ? ` (by ${r.matchBasis.replace(/_/g, " ")})` : ""}</td>
                     <td className="p-1">{r.data?.firm_name}</td>
                     <td className="p-1">
-                      {Object.keys(r.fill).length > 0 && <div>Fill blanks: {Object.keys(r.fill).join(", ")}</div>}
-                      {r.conflicts.map((c, i) => <div key={i} className="text-amber-800">Conflict {c.field}: keep &quot;{c.existing.slice(0, 40)}&quot; vs incoming &quot;{c.incoming.slice(0, 40)}&quot;</div>)}
+                      {Object.keys(r.fill).length > 0 && <div>Fills in: {Object.keys(r.fill).map((k) => FIELD_LABEL[k] ?? k).join(", ")}</div>}
+                      {r.conflicts.map((c, i) => <div key={i} className="text-amber-800">Different {FIELD_LABEL[c.field]?.toLowerCase() ?? c.field}: keep &quot;{c.existing.slice(0, 40)}&quot; vs incoming &quot;{c.incoming.slice(0, 40)}&quot;</div>)}
                       {r.issues.map((x, i) => <div key={i} className={x.level === "error" ? "text-rose-700" : "text-slate-500"}>{x.message}</div>)}
                     </td>
                   </tr>

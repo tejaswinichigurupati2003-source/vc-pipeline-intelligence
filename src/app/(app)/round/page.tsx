@@ -1,7 +1,7 @@
 import PageHeader from "@/components/shell/PageHeader";
 import SettingsForm from "@/components/SettingsForm";
-import { FIT_ASSUMPTIONS, fitScore } from "@/lib/insights/fit";
-import { DEFAULT_TARGET, ROUND_ASSUMPTIONS, roundHealth } from "@/lib/insights/round-health";
+import { fitScore } from "@/lib/insights/fit";
+import { DEFAULT_TARGET, roundHealth } from "@/lib/insights/round-health";
 import { STATUS_LABEL } from "@/lib/view/format";
 import { getSettings, pipeline } from "@/lib/workspace/data";
 
@@ -18,7 +18,7 @@ export default async function Round() {
 
   return (
     <main className="max-w-3xl">
-      <PageHeader title="Round overview" subtitle={<>Coverage and stage distribution of your investor list, with the assumptions behind every number.</>} />
+      <PageHeader title="Round overview" subtitle={<>Where your round stands against your targets.</>} />
 
       <section className="mb-6 grid gap-3 md:grid-cols-4">
         {[["Tracked", h.total], ["Contacted", `${h.contacted} (${h.coveragePct}%)`], ["In conversation", `${h.active} (${h.conversionPct}% of contacted)`], ["Fresh high signals", h.hotNow]].map(([l, v]) => (
@@ -31,7 +31,7 @@ export default async function Round() {
         {(Object.entries(h.dist) as [string, number][]).map(([k, n]) => (
           <div key={k} className="mb-2"><div className="flex justify-between text-sm"><span>{STATUS_LABEL[k]}</span><span>{n}</span></div>{bar(n)}</div>
         ))}
-        <p className="mt-2 text-xs text-slate-500">{h.strongFit} investors have a thesis-keyword fit of 70+ (heuristic, see assumptions).</p>
+        <p className="mt-2 text-xs text-slate-500">{h.strongFit} investors are a strong match for your thesis.</p>
       </section>
 
       <section className="mb-6 card p-4">
@@ -45,10 +45,7 @@ export default async function Round() {
         </div>
       </section>
 
-      <section className="border border-slate-300 bg-slate-50 p-4 text-sm">
-        <h2 className="mb-2 font-semibold">Assumptions</h2>
-        <ul className="list-disc space-y-1 pl-5 text-slate-600">{[...ROUND_ASSUMPTIONS, ...FIT_ASSUMPTIONS].map((a, i) => <li key={i}>{a}</li>)}</ul>
-      </section>
+
     </main>
   );
 }

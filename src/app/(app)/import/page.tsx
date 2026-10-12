@@ -3,6 +3,7 @@ import PageHeader from "@/components/shell/PageHeader";
 import { ApiButton, Badge } from "@/components/ui";
 import { db } from "@/lib/db/client";
 import { fmtDateTime } from "@/lib/view/format";
+import { FIELD_LABEL } from "@/lib/importer/mapping";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,7 @@ export default async function ImportPage() {
         <ul className="space-y-2">
           {(conflicts ?? []).map((c) => (
             <li key={c.id} className="card-sm p-3 text-sm">
-              <div><b>{name.get(c.vc_id)}</b> · <code>{c.field}</code> <Badge kind="neutral">{c.source}</Badge> <span className="text-xs text-slate-500">matched by {c.match_basis.replace(/_/g, " ")}</span></div>
+              <div><b>{name.get(c.vc_id)}</b> · <b>{FIELD_LABEL[c.field] ?? c.field}</b> <Badge kind="neutral">{c.source}</Badge> <span className="text-xs text-slate-500">matched by {c.match_basis.replace(/_/g, " ")}</span></div>
               <div className="mt-1 grid gap-2 text-xs md:grid-cols-2">
                 <div className="rounded bg-slate-50 p-2"><div className="text-slate-500">Existing (kept)</div>{c.existing_value}</div>
                 <div className="rounded bg-amber-50 p-2"><div className="text-slate-500">Incoming</div>{c.incoming_value}</div>

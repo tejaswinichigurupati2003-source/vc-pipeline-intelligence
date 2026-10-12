@@ -32,9 +32,9 @@ describe("today actions", () => {
     ] }));
     expect(t.actions).toHaveLength(0);
     const why = t.suppressed.map((s) => s.reason).join(" | ");
-    expect(why).toMatch(/only 3d since last contact/);
-    expect(why).toMatch(/Last scan failed/);
-    expect(why).toMatch(/Quiet/);
+    expect(why).toMatch(/3 days so far/);
+    expect(why).toMatch(/couldn.t check/);
+    expect(why).toMatch(/No recent public signal/);
     expect(why).toMatch(/Closed/);
   });
   it("follows up on silence after N days, but not when a relationship state exists", () => {
@@ -95,7 +95,7 @@ describe("drafts and briefs only use verified/approved content", () => {
   });
   it("warns instead of inventing when there is no signal or no approved claims", () => {
     const out = composeDraft({ ...base, signal: null, relationship: null, materials: [] });
-    expect(out.warnings.join(" ")).toMatch(/No verified public signal/);
+    expect(out.warnings.join(" ")).toMatch(/No recent signal/);
     expect(out.warnings.join(" ")).toMatch(/No approved company claims/);
     expect(out.body).not.toContain("I noticed");
   });

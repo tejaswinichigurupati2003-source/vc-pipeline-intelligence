@@ -70,15 +70,15 @@ function InvestorCard({ r, href, draggable, dragging, onDragStart, onDragEnd }: 
 
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
         <Chip tone={a.tone} title={a.hint}>{a.label}</Chip>
-        {r.relState && <Chip tone={r.relState.confirmed ? "info" : "muted"} title={r.relState.confirmed ? "You confirmed this" : "Inferred from email, confirm in Conversations"}>{STATE_LABEL[r.relState.state as RelationshipState]}{r.relState.confirmed ? "" : "?"}</Chip>}
-        {r.rulesOnly && <Chip tone="muted" title="Scanned with simple rules because Gemini was unavailable">Rules-only</Chip>}
+        {r.relState && <Chip tone={r.relState.confirmed ? "info" : "muted"} title={r.relState.confirmed ? "You confirmed this" : "Detected from email. Confirm it in Conversations."}>{STATE_LABEL[r.relState.state as RelationshipState]}{r.relState.confirmed ? "" : "?"}</Chip>}
+        {r.rulesOnly && <Chip tone="muted" title="A limited check was used for this investor">Basic scan</Chip>}
       </div>
 
       <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-2.5 text-[0.72rem] text-slate-500">
         {r.source ? (
           <a href={r.source.url} target="_blank" rel="noopener noreferrer" draggable={false} className="inline-flex max-w-[60%] items-center gap-1 truncate font-semibold text-slate-500 no-underline hover:text-indigo-700 hover:no-underline"><Icon name="link" className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{r.source.domain}</span></a>
         ) : <span className="inline-flex items-center gap-1"><Icon name="clock" className="h-3.5 w-3.5" />{r.lastSignal ? `Last signal ${timeAgo(r.lastSignal)}` : "No signal yet"}</span>}
-        <span title="Thesis-keyword fit from your notes">FIT <b className="text-slate-800">{r.fit}</b></span>
+        <span title="How well their thesis matches yours">FIT <b className="text-slate-800">{r.fit}</b></span>
       </div>
     </article>
   );

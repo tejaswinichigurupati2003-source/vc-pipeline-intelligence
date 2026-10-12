@@ -47,7 +47,7 @@ export default async function WorkspaceVc({ params }: { params: Promise<{ id: st
       <div>
         <div className="flex flex-wrap items-center gap-2">
           {e.provenance === "user" ? <Badge kind="note">Your note</Badge> : <Badge kind="private">{e.provenance === "gmail" ? "Gmail" : "Calendar"} · private</Badge>}
-          {e.state && <Badge kind={e.state_confidence === "user_confirmed" ? "confirmed" : "inferred"}>{STATE_LABEL[e.state as RelationshipState]}{e.state_confidence === "user_confirmed" ? "" : " (inferred)"}</Badge>}
+          {e.state && <Badge kind={e.state_confidence === "user_confirmed" ? "confirmed" : "inferred"}>{STATE_LABEL[e.state as RelationshipState]}{e.state_confidence === "user_confirmed" ? "" : " (suggested)"}</Badge>}
           {e.link_url ? <a href={e.link_url} target="_blank" rel="noopener noreferrer" className="font-medium">{e.title}</a> : <span className="font-medium">{e.title}</span>}
         </div>
         <div className="text-xs text-slate-500">{fmtDateTime(e.occurred_at)}{e.summary ? ` · ${e.summary}` : ""}</div>
@@ -80,7 +80,7 @@ export default async function WorkspaceVc({ params }: { params: Promise<{ id: st
 
       {!!commitments?.length && (
         <section className="mt-6"><h2 className="font-semibold">Open commitments</h2>
-          <ul className="text-sm">{commitments.map((c) => <li key={c.id}>{c.who === "founder" ? "You" : "Investor"}: {c.text} (due {fmtDate(c.due_at)}) {c.status === "proposed" && <Badge kind="inferred">proposed</Badge>}</li>)}</ul></section>
+          <ul className="text-sm">{commitments.map((c) => <li key={c.id}>{c.who === "founder" ? "You" : "Investor"}: {c.text} (due {fmtDate(c.due_at)}) {c.status === "proposed" && <Badge kind="inferred">suggested</Badge>}</li>)}</ul></section>
       )}
       {!!dd?.length && (
         <section className="mt-6"><h2 className="font-semibold">Diligence</h2>

@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const back = (q: string) => NextResponse.redirect(new URL(`/integrations?${q}`, process.env.APP_URL ?? url.origin));
+  if (url.searchParams.get("error")) console.error(`[raise] google oauth declined: ${url.searchParams.get("error")}`);
   if (url.searchParams.get("error")) return back(`error=${encodeURIComponent(url.searchParams.get("error")!)}`);
 
   const payload = verifyState(url.searchParams.get("state") ?? "");
@@ -18,6 +19,7 @@ export async function GET(req: Request) {
   try {
     await completeConnection(provider, code);
   } catch (e) {
+    console.error(`[raise] google oauth failed: ${(e as Error).message}`);
     return back(`error=${encodeURIComponent((e as Error).message.slice(0, 200))}`);
   }
   const res = back(`connected=${provider}`);
