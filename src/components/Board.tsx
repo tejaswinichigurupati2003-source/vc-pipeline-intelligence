@@ -3,27 +3,31 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import CountUp from "./CountUp";
 import Icon from "@/components/shell/Icon";
 import { STATE_LABEL, type RelationshipState } from "@/lib/relationships/classify";
 import { cleanSummary, type BoardRow } from "@/lib/view/board";
 import { avatarStyle, formatAction, initials, signalStrength, STAGES, TONE_CLASS, timeAgo, type Tone } from "@/lib/view/labels";
 
-type Filter = "all" | "hot" | "warm" | "quiet" | "stale";
+type Filter = "all" | "ready" | "hot" | "warm" | "quiet" | "stale";
+export const FILTER_KEYS: Filter[] = ["all", "ready", "hot", "warm", "quiet", "stale"];
 type Sort = "score" | "name" | "recent";
 
 const HINT: Record<Filter, string> = {
   all: "Every investor on your list",
+  ready: "Not contacted yet, with a strong and fresh verified signal",
   hot: "Signal strength 30+: recent verified activity that is worth acting on",
   warm: "Signal strength 1 to 29: some verified activity, but light",
   quiet: "No verified activity found in the last 30 days",
   stale: "The last scan failed, so these show older values",
 };
 const FILTERS: { key: Filter; label: string }[] = [
-  { key: "all", label: "All" }, { key: "hot", label: "Hot" }, { key: "warm", label: "Warm" }, { key: "quiet", label: "Quiet" }, { key: "stale", label: "Needs refresh" },
+  { key: "all", label: "All" }, { key: "ready", label: "Ready to reach out" }, { key: "hot", label: "Hot" }, { key: "warm", label: "Warm" }, { key: "quiet", label: "Quiet" }, { key: "stale", label: "Needs refresh" },
 ];
 
 function matches(r: BoardRow, f: Filter) {
   if (f === "all") return true;
+  if (f === "ready") return r.bucket === "reach_out";
   if (f === "stale") return r.bucket === "stale";
   if (r.bucket === "stale") return false;
   return signalStrength(r.score).band === f;
@@ -39,7 +43,7 @@ function ScoreCell({ score, stale }: { score: number | null; stale: boolean }) {
   const fill = stale ? "bg-rose-600" : s.band === "hot" ? "bg-emerald-600" : s.band === "warm" ? "bg-amber-500" : "bg-slate-400";
   return (
     <div className="w-12 shrink-0 border border-slate-300 bg-white" title={stale ? "Last scan failed" : `Signal strength: ${s.label}${score !== null ? ` (${score}/100)` : ""}`}>
-      <div className="grid h-8 place-items-center font-display text-[0.95rem] font-semibold text-slate-900">{stale ? "!" : score ?? "–"}</div>
+      <div className="grid h-8 place-items-center font-display text-[0.95rem] font-semibold text-slate-900">{stale ? "!" : score === null ? "–" : <CountUp value={score} ms={650} />}</div>
       <div className="h-1 bg-slate-100"><div className={`h-full ${fill}`} style={{ width: `${stale ? 100 : Math.min(100, score ?? 0)}%` }} /></div>
     </div>
   );
@@ -92,11 +96,14 @@ function InvestorCard({ r, href, draggable, dragging, onDragStart, onDragEnd }: 
     </article>
   );
 }
-export default function Board({ rows, editable, detailBase, initialQuery = "" }: { rows: BoardRow[]; editable: boolean; detailBase: string; initialQuery?: string }) {
+const STAGE_FILTER = (stage: string, r: BoardRow) => (stage === "contacted" ? r.stage !== "yet_to_reach_out" : r.stage === stage);
+
+export default function Board({ rows, editable, detailBase, initialQuery = "", initialFilter = "all", initialStage = "" }: { rows: BoardRow[]; editable: boolean; detailBase: string; initialQuery?: string; initialFilter?: string; initialStage?: string }) {
   const router = useRouter();
   const [data, setData] = useState(rows);
   const [q, setQ] = useState(initialQuery);
-  const [filter, setFilter] = useState<Filter>("all");
+  const [filter, setFilter] = useState<Filter>(FILTER_KEYS.includes(initialFilter as Filter) ? (initialFilter as Filter) : "all");
+  const [stageFilter, setStageFilter] = useState(initialStage);
   const [sort, setSort] = useState<Sort>("score");
   const [view, setView] = useState<"board" | "list">("board");
   const [dragId, setDragId] = useState<string | null>(null);
@@ -105,12 +112,12 @@ export default function Board({ rows, editable, detailBase, initialQuery = "" }:
 
   const visible = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    const list = data.filter((r) => matches(r, filter) && (!needle || `${r.firm} ${r.person ?? ""}`.toLowerCase().includes(needle)));
+    const list = data.filter((r) => matches(r, filter) && (!stageFilter || STAGE_FILTER(stageFilter, r)) && (!needle || `${r.firm} ${r.person ?? ""}`.toLowerCase().includes(needle)));
     const key = (r: BoardRow) => (sort === "name" ? 0 : sort === "recent" ? (r.lastSignal ? new Date(r.lastSignal).getTime() : 0) : (r.score ?? -1));
     const mom = (r: BoardRow) => (r.momentum === "rising" ? 2 : r.momentum === "new" ? 1.5 : r.momentum === "steady" ? 1 : r.momentum === "cooling" ? 0.5 : 0);
     // Equal strength: investors speeding up come first.
     return [...list].sort((a, b) => (sort === "name" ? a.firm.localeCompare(b.firm) : key(b) - key(a) || mom(b) - mom(a)));
-  }, [data, q, filter, sort]);
+  }, [data, q, filter, sort, stageFilter]);
 
   const counts = useMemo(() => Object.fromEntries(FILTERS.map((f) => [f.key, data.filter((r) => matches(r, f.key)).length])), [data]);
 
@@ -141,10 +148,15 @@ export default function Board({ rows, editable, detailBase, initialQuery = "" }:
         <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Signal filter">
           {FILTERS.map((f) => (
             <button key={f.key} title={HINT[f.key]} onClick={() => setFilter(f.key)} className={`border px-3 py-1.5 text-[0.8rem] font-semibold transition ${filter === f.key ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 bg-white text-slate-600 hover:border-slate-900"}`}>
-              {f.label} <span className={filter === f.key ? "text-slate-300" : "text-slate-400"}>{counts[f.key]}</span>
+              {f.label} <span className={filter === f.key ? "text-slate-300" : "text-slate-400"}><CountUp value={counts[f.key]} ms={450} /></span>
             </button>
           ))}
         </div>
+        {stageFilter && (
+          <button onClick={() => setStageFilter("")} className="inline-flex items-center gap-1.5 border border-indigo-700 bg-indigo-50 px-2.5 py-1.5 text-[0.8rem] font-semibold text-indigo-800 transition hover:bg-indigo-100" title="Clear this filter">
+            Showing: {stageFilter === "contacted" ? "contacted investors" : STAGES.find((s) => s.key === stageFilter)?.title ?? stageFilter} <Icon name="close" className="h-3.5 w-3.5" />
+          </button>
+        )}
         <p className="basis-full text-xs text-slate-500">{HINT[filter]}. Signal strength is scored from verified news in the last 30 days.</p>
         <div className="ml-auto flex items-center gap-2">
           <label className="flex items-center gap-2 text-[0.8rem] font-semibold text-slate-500">Sort

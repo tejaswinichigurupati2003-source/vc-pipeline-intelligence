@@ -46,7 +46,8 @@ export interface ScoreResult {
 }
 
 export function bandOf(score: number): "high" | "medium" | "low" {
-  return score >= 70 ? "high" : score >= 40 ? "medium" : "low";
+  // Same cut-offs as the Hot / Warm / Quiet labels, so "Hot" always comes with "Reach out".
+  return score >= 30 ? "high" : score >= 1 ? "medium" : "low";
 }
 
 /** Pure, reproducible: score = min(100, round(sum(base * recency * relevance * sourceConfidence))). */

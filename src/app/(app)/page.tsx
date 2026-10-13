@@ -1,4 +1,7 @@
 import Link from "next/link";
+import CountUp from "@/components/CountUp";
+import { LiveInsights, SignalTicker } from "@/components/LiveBits";
+import { buildLiveLines, buildTicker } from "@/lib/insights/live";
 import Icon, { type IconName } from "@/components/shell/Icon";
 import { ApiButton, Badge } from "@/components/ui";
 import { db } from "@/lib/db/client";
@@ -14,22 +17,24 @@ const GROUP_ICON: Record<ActionType, IconName> = {
   respond: "chat", commitment_due: "check", post_meeting: "clock", meeting_prep: "today", reach_out: "signal", follow_up: "refresh",
 };
 
-function Stat({ label, value, hint }: { label: string; value: number; hint: string }) {
+function Stat({ label, value, hint, href }: { label: string; value: number; hint: string; href: string }) {
   return (
-    <div className="px-6 py-5">
+    <Link href={href} className="stat-link px-6 py-5 no-underline hover:no-underline" title={`See the ${value} investor${value === 1 ? "" : "s"}`}>
       <div className="text-[0.66rem] font-semibold uppercase tracking-[0.14em] text-white/60">{label}</div>
-      <div className="mt-2 font-display text-[2.1rem] font-semibold leading-none text-white">{value}</div>
+      <div className="mt-2 font-display text-[2.1rem] font-semibold leading-none text-white"><CountUp value={value} /></div>
       <div className="mt-2 text-xs text-white/60">{hint}</div>
-    </div>
+      <span className="go text-white/80"><Icon name="arrowUp" className="h-4 w-4 rotate-45" /></span>
+    </Link>
   );
 }
 
 export default async function Today() {
-  const [rows, states, settings, run, { data: commitments }, { data: meetings }, { data: fb }] = await Promise.all([
+  const [rows, states, settings, run, { data: commitments }, { data: meetings }, { data: fb }, { count: newSuggestions }] = await Promise.all([
     pipeline(), getStates(), getSettings(), latestRun(),
     db().from("commitments").select("id, vc_id, text, due_at, status, who"),
     db().from("calendar_events").select("id, vc_id, title, start_at, notes_confirmed, followup_done, included"),
     db().from("user_feedback").select("target_id, created_at").eq("target_type", "action").eq("verdict", "dismissed").order("created_at", { ascending: true }),
+    db().from("investor_suggestions").select("id", { count: "exact", head: true }).eq("status", "new"),
   ]);
   const dismissed = Object.fromEntries((fb ?? []).map((f) => [f.target_id, f.created_at]));
 
@@ -46,21 +51,24 @@ export default async function Today() {
 
   return (
     <>
-      <section className="grad-cherry hatch relative mb-8 overflow-hidden border border-slate-900">
+      <section className="grad-cherry hero-shift hatch relative mb-8 overflow-hidden border border-slate-900">
         <div className="relative z-10 p-6 lg:p-8">
           <div className="text-[0.66rem] font-semibold uppercase tracking-[0.14em] text-white/60">{new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}</div>
           <h1 className="mt-2 !text-[1.9rem] !text-white">{greeting}</h1>
           <p className="mt-2 max-w-xl text-[0.95rem] leading-relaxed text-white/75">
             {today.total ? <>You have <b className="text-white">{today.total}</b> things worth doing{today.total > today.shown ? `; here are the top ${today.shown}` : ""}. Ranked by what matters most.</> : "Nothing needs your attention right now."}
           </p>
+          <LiveInsights lines={buildLiveLines(rows, newSuggestions ?? 0)} />
         </div>
         <div className="relative z-10 grid grid-cols-2 divide-x divide-white/20 border-t border-white/20 xl:grid-cols-4">
-          <Stat label="Ready to reach out" value={count("reach_out")} hint="Fresh, strong signal" />
-          <Stat label="Awaiting reply" value={rows.filter((r) => r.contact_status === "waiting_for_response").length} hint="You've reached out" />
-          <Stat label="In conversation" value={rows.filter((r) => r.contact_status === "in_conversation").length} hint="Active discussions" />
-          <Stat label="Needs a refresh" value={count("stale")} hint="Last scan failed" />
+          <Stat label="Ready to reach out" value={count("reach_out")} hint="Fresh, strong signal" href="/investors?filter=ready" />
+          <Stat label="Awaiting reply" value={rows.filter((r) => r.contact_status === "waiting_for_response").length} hint="You've reached out" href="/investors?stage=waiting_for_response" />
+          <Stat label="In conversation" value={rows.filter((r) => r.contact_status === "in_conversation").length} hint="Active discussions" href="/investors?stage=in_conversation" />
+          <Stat label="Needs a refresh" value={count("stale")} hint="Last scan failed" href="/investors?filter=stale" />
         </div>
       </section>
+
+      <SignalTicker items={buildTicker(rows)} />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="space-y-6">

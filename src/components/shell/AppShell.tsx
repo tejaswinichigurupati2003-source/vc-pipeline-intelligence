@@ -1,3 +1,7 @@
+import CommandCenter from "@/components/CommandCenter";
+import CountUp from "@/components/CountUp";
+import { LiveAgo } from "@/components/LiveBits";
+import Link from "next/link";
 import RefreshControls from "@/components/RefreshControls";
 import { LogoutButton } from "@/components/ui";
 import { workspaceOpen } from "@/lib/auth";
@@ -9,20 +13,27 @@ import Sidebar, { type NavGroup } from "./Sidebar";
 
 const num = (v: string | undefined, d: number) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : d);
 
-function Meter({ label, value, target }: { label: string; value: number; target: number }) {
+function Meter({ label, value, target, href }: { label: string; value: number; target: number; href: string }) {
   const pct = Math.min(100, Math.round((value / Math.max(1, target)) * 100));
   return (
-    <div className="min-w-[10rem]" title={`${label}: ${value} of ${target}`}>
-      <div className="mb-1 flex items-baseline justify-between gap-3 text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-slate-500"><span>{label}</span><span className="text-slate-900">{value}<span className="text-slate-400">/{target}</span></span></div>
-      <div className="h-2 border border-slate-900 bg-white"><div className="h-full grad-cherry" style={{ width: `${pct}%` }} /></div>
-    </div>
+    <Link href={href} className="block min-w-[9rem] no-underline transition hover:-translate-y-px hover:no-underline" title={`${label}: ${value} of ${target}. Click to see them.`}>
+      <div className="mb-1 flex items-baseline justify-between gap-3 text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-slate-500"><span>{label}</span><span className="text-slate-900"><CountUp value={value} /><span className="text-slate-400">/{target}</span></span></div>
+      <div className="h-2 border border-slate-900 bg-white"><div className="h-full grad-cherry transition-[width] duration-700 ease-out" style={{ width: `${pct}%` }} /></div>
+    </Link>
   );
 }
+
+const PAGE_HINT: Record<string, string> = {
+  "/": "Start here: what to do today", "/round": "Where your round stands against targets", "/investors": "Search and filter every investor",
+  "/signals": "Verified public news behind the scores", "/conversations": "Replies and threads from Gmail", "/drafts": "Suggested messages, saved to Gmail",
+  "/intros": "Warm paths to investors", "/discover": "New investors that fit your company", "/data-room": "Company facts and documents",
+  "/demo": "Watch how the whole thing works", "/integrations": "Connect Gmail and Calendar", "/import": "Bring your investor list in or out",
+};
 
 /** The one app frame: fixed sidebar, top bar with round progress, search and refresh. */
 export default async function AppShell({ children }: { children: React.ReactNode }) {
   const load = () => Promise.all([
-    db().from("vc_pipeline").select("contact_status"),
+    db().from("vc_pipeline").select("id, firm_name, investor_name, contact_status").order("firm_name"),
     latestRun(),
     db().from("app_settings").select("key, value"),
     db().from("commitments").select("id", { count: "exact", head: true }).eq("status", "proposed"),
@@ -49,7 +60,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
       { href: "/intros", label: "Warm intros", icon: "intro" },
       { href: "/discover", label: "Discover investors", icon: "compass" },
     ] },
-    { title: "Prepare", items: [{ href: "/data-room", label: "Data room", icon: "folder" }] },
+    { title: "Prepare", items: [{ href: "/data-room", label: "Data room", icon: "folder" }, { href: "/demo", label: "Demo", icon: "play" }] },
     { title: "Settings", items: [{ href: "/integrations", label: "Integrations", icon: "plug" }, { href: "/import", label: "Import & export", icon: "upload" }] },
   ];
 
@@ -75,23 +86,23 @@ export default async function AppShell({ children }: { children: React.ReactNode
       />
       <div className="lg:pl-[15.5rem]">
         <header className="sticky top-0 z-10 border-b border-slate-900 bg-white/95 backdrop-blur">
-          <div className="flex min-h-16 flex-wrap items-center gap-x-6 gap-y-2 px-5 py-2 pl-16 lg:px-8">
-            <div className="hidden xl:block">
+          <div className="flex h-16 flex-nowrap items-center gap-x-5 px-5 pl-16 lg:px-8">
+            <div className="hidden shrink-0 min-[1400px]:block">
               <div className="font-display text-[0.8rem] font-semibold uppercase tracking-[0.06em] text-slate-900">{settings.company_name ? `${settings.company_name} · Seed` : "Seed round"}</div>
               <div className="text-xs text-slate-500">{all.length} investors tracked</div>
             </div>
-            <div className="hidden gap-6 md:flex">
-              <Meter label="Contacted" value={contacted} target={num(settings.round_target_investors, 40)} />
-              <Meter label="In conversation" value={active} target={num(settings.round_target_conversations, 8)} />
+            <div className="hidden shrink-0 gap-6 min-[1100px]:flex">
+              <Meter label="Contacted" value={contacted} target={num(settings.round_target_investors, 40)} href="/investors?stage=contacted" />
+              <Meter label="In conversation" value={active} target={num(settings.round_target_conversations, 8)} href="/investors?stage=in_conversation" />
             </div>
-            <form action="/investors" className="relative ml-auto w-full max-w-xs flex-1">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Icon name="search" className="h-4 w-4" /></span>
-              <input name="q" placeholder="Search investors" aria-label="Search investors" className="!pl-9" />
-            </form>
-            <div className="flex items-center gap-4">
-              <div className="hidden text-right text-xs leading-tight text-slate-500 sm:block" title={run ? `Run ${run.status}` : undefined}>
+            <CommandCenter
+              investors={all.map((n) => ({ id: n.id, firm: n.firm_name, person: n.investor_name !== n.firm_name ? n.investor_name : null }))}
+              pages={groups.flatMap((g) => g.items).map((i) => ({ href: i.href, label: i.label, hint: PAGE_HINT[i.href] ?? "Open", icon: i.icon }))}
+            />
+            <div className="flex shrink-0 items-center gap-4">
+              <div className="hidden whitespace-nowrap text-right text-xs leading-tight text-slate-500 min-[1280px]:block" title={run ? `Run ${run.status}` : undefined}>
                 <div className={`font-semibold ${failed ? "text-rose-700" : "text-slate-800"}`}>{run ? (failed ? "Last scan incomplete" : run.status === "running" ? "Scanning…" : "Signals up to date") : "No scan yet"}</div>
-                <div>{run ? timeAgo(run.finished_at ?? run.started_at) : "Run your first refresh"}</div>
+                <div>{run ? <LiveAgo iso={run.finished_at ?? run.started_at} /> : "Run your first refresh"}</div>
               </div>
               <RefreshControls stalled={stalled} runId={run?.id ?? null} open={open} running={run?.status === "running"} />
             </div>

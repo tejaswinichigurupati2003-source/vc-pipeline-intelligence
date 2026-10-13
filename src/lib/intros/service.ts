@@ -28,16 +28,19 @@ export async function ensureAllVcNodes(vcs: { id: string; firm_name: string }[])
 }
 
 export async function loadGraph(): Promise<{ nodes: GNode[]; edges: GEdge[] }> {
-  const { data: nodes } = await db().from("warm_nodes").select("id, kind, label, vc_id");
-  const { data: edges } = await db().from("warm_edges").select("*");
+  const [{ data: nodes }, { data: edges }] = await Promise.all([db().from("warm_nodes").select("id, kind, label, vc_id"), db().from("warm_edges").select("*")]);
   return { nodes: (nodes ?? []) as GNode[], edges: (edges ?? []) as GEdge[] };
 }
 
 export async function pathsForVc(vcId: string): Promise<IntroPath[]> {
-  const { data: vc } = await db().from("vc_pipeline").select("id, firm_name").eq("id", vcId).maybeSingle();
+  // Read the investor and the whole graph together. Only when the investor has no node yet (first visit) do we add it and re-read.
+  const [{ data: vc }, first] = await Promise.all([db().from("vc_pipeline").select("id, firm_name").eq("id", vcId).maybeSingle(), loadGraph()]);
   if (!vc) return [];
-  await ensureVcNode(vc.id, vc.firm_name);
-  const g = await loadGraph();
+  let g = first;
+  if (!g.nodes.some((n) => n.kind === "vc" && n.vc_id === vcId)) {
+    await ensureVcNode(vc.id, vc.firm_name);
+    g = await loadGraph();
+  }
   return findPaths(g.nodes, g.edges, vcId, new Date());
 }
 

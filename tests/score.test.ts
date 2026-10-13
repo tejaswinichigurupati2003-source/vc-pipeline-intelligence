@@ -38,7 +38,7 @@ describe("scoring math", () => {
     expect(scoreSignals(many, NOW).score).toBeLessThanOrEqual(100);
   });
   it("bands", () => {
-    expect([bandOf(70), bandOf(69), bandOf(40), bandOf(39)]).toEqual(["high", "medium", "medium", "low"]);
+    expect([bandOf(70), bandOf(30), bandOf(29), bandOf(1), bandOf(0)]).toEqual(["high", "high", "medium", "medium", "low"]);
   });
 });
 

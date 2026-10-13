@@ -22,7 +22,7 @@ export const POST = adminRoute(Body, async ({ entity, op, id, values }) => {
   return result;
 });
 
-const Setting = z.object({ key: z.enum(["founder_name", "company_name", "company_one_liner", "round_target_investors", "round_target_conversations", "follow_up_after_days"]), value: z.coerce.string().max(500) });
+const Setting = z.object({ key: z.enum(["founder_name", "company_name", "company_one_liner", "round_target_investors", "round_target_conversations", "follow_up_after_days", "demo_video_url"]), value: z.coerce.string().max(500) });
 export const PUT = adminRoute(Setting, async ({ key, value }) => {
   const { error } = await db().from("app_settings").upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: "key" });
   if (error) throw new Error(error.message);

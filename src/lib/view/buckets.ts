@@ -31,5 +31,5 @@ export function bucketFor(row: {
 
 export function bandOfScore(score: number | null): "high" | "medium" | "low" | "none" {
   if (score === null) return "none";
-  return score >= 70 ? "high" : score >= 40 ? "medium" : "low";
+  return score >= 30 ? "high" : score >= 1 ? "medium" : "low";
 }

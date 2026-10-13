@@ -5,8 +5,8 @@ import { getStates, pipeline } from "@/lib/workspace/data";
 
 export const dynamic = "force-dynamic";
 
-export default async function InvestorsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const { q } = await searchParams;
+export default async function InvestorsPage({ searchParams }: { searchParams: Promise<{ q?: string; filter?: string; stage?: string }> }) {
+  const { q, filter, stage } = await searchParams;
   const [rows, states] = await Promise.all([pipeline(), getStates()]);
   return (
     <>
@@ -14,7 +14,7 @@ export default async function InvestorsPage({ searchParams }: { searchParams: Pr
         title="Investors"
         subtitle="All your investors by stage. Drag a card to move it."
       />
-      <Board rows={toBoardRows(rows, states)} editable detailBase="/workspace/vc" initialQuery={q ?? ""} />
+      <Board key={`${filter ?? ""}|${stage ?? ""}|${q ?? ""}`} rows={toBoardRows(rows, states)} editable detailBase="/workspace/vc" initialQuery={q ?? ""} initialFilter={filter ?? "all"} initialStage={stage ?? ""} />
     </>
   );
 }

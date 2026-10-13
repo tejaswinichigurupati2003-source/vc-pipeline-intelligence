@@ -97,7 +97,7 @@ export default function RefreshControls({ stalled, runId, open, running }: { sta
         <Icon name="refresh" className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} />
         {busy ? "Refreshing" : "Refresh"}
       </button>
-      {msg && <span className="min-w-12 text-xs font-semibold text-slate-500">{msg}</span>}
+      {msg && <span className="hidden max-w-[11rem] truncate text-xs font-semibold text-slate-500 xl:inline" title={msg}>{msg}</span>}
     </div>
   );
 }
