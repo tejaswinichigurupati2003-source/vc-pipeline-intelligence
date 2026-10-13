@@ -33,11 +33,11 @@ export async function loadGraph(): Promise<{ nodes: GNode[]; edges: GEdge[] }> {
 }
 
 export async function pathsForVc(vcId: string): Promise<IntroPath[]> {
-  // Read the investor and the whole graph together. Only when the investor has no node yet (first visit) do we add it and re-read.
-  const [{ data: vc }, first] = await Promise.all([db().from("vc_pipeline").select("id, firm_name").eq("id", vcId).maybeSingle(), loadGraph()]);
-  if (!vc) return [];
-  let g = first;
+  // Read the whole graph in one go. Only when this investor has no node yet (first visit) is it added, and the graph read again.
+  let g = await loadGraph();
   if (!g.nodes.some((n) => n.kind === "vc" && n.vc_id === vcId)) {
+    const { data: vc } = await db().from("vc_pipeline").select("id, firm_name").eq("id", vcId).maybeSingle();
+    if (!vc) return [];
     await ensureVcNode(vc.id, vc.firm_name);
     g = await loadGraph();
   }
