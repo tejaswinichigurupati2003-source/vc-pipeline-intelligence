@@ -81,3 +81,16 @@ describe("buildQueries", () => {
     expect(q.every((x) => !x.query.includes("(Matrix") || x.provider === "google_news_rss")).toBe(true);
   });
 });
+
+describe("firm-news query for firm-named rows", () => {
+  it("adds one plain firm-news query on Google News, within the per-investor cap, and none for partner rows", () => {
+    const firm = buildQueries(vc({ investor_name: "Blume Ventures", firm_name: "Blume Ventures" }));
+    const q8 = firm.filter((x) => x.id === "Q8");
+    expect(q8).toHaveLength(1);
+    expect(q8[0].provider).toBe("google_news_rss");
+    expect(q8[0].query).toContain('"Blume Ventures"');
+    expect(q8[0].query).toContain("when:30d");
+    expect(firm.length).toBeLessThanOrEqual(4);
+    expect(buildQueries(vc()).some((x) => x.id === "Q8")).toBe(false);
+  });
+});

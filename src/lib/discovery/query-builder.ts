@@ -3,7 +3,7 @@ import { investorIsFirmName, normText } from "./normalize";
 import type { VcProfile } from "@/lib/types";
 
 export interface PlannedQuery {
-  id: "Q1" | "Q2" | "Q3" | "Q4" | "Q5" | "Q6" | "Q7";
+  id: "Q1" | "Q2" | "Q3" | "Q4" | "Q5" | "Q6" | "Q7" | "Q8";
   provider: "langsearch" | "google_news_rss";
   query: string;
   /** LangSearch freshness window. The history search looks back a year; everything else one month. */
@@ -39,6 +39,10 @@ export function buildQueries(vc: VcProfile, opts: { backfill?: boolean } = {}): 
   out.push({ id: "Q4", provider: "google_news_rss", query: `"${firm}" (${orTerms}) when:${config.lookbackDays}d` });
   if (personal) {
     out.push({ id: "Q5", provider: "google_news_rss", query: `"${clean(vc.investor_name)}" when:${config.lookbackDays}d` });
+  } else {
+    // Firm-only rows leave this slot empty. Q4 needs a sector word next to the firm name, which misses fund and portfolio news
+    // that the classifier would still accept; this plain firm-news query (free, no search quota) widens recall.
+    out.push({ id: "Q8", provider: "google_news_rss", query: `"${firm}" (raises OR invests OR "led by" OR "new fund" OR portfolio) when:${config.lookbackDays}d` });
   }
   const base = out.slice(0, config.maxQueriesPerVc);
   // Extra, bounded searches: associated partners (news, last 30 days) and, about monthly, a one-year history search for the time series.
