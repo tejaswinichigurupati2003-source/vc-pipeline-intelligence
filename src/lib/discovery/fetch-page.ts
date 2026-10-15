@@ -18,14 +18,17 @@ export class FetchError extends Error {
 /** Loopback, private, link-local, CGNAT, multicast and cloud-metadata ranges (IPv4 + IPv6). */
 export function isPrivateIp(ip: string): boolean {
   if (net.isIPv4(ip)) {
-    const [a, b] = ip.split(".").map(Number);
+    const [a, b, c] = ip.split(".").map(Number);
     return (
       a === 0 || a === 10 || a === 127 ||
       (a === 100 && b >= 64 && b <= 127) ||
       (a === 169 && b === 254) ||
       (a === 172 && b >= 16 && b <= 31) ||
       (a === 192 && b === 168) ||
-      (a === 192 && b === 0) ||
+      // Only the reserved 192.0.0.0/24 and documentation 192.0.2.0/24 blocks. 192.0.64.0/18 and others in 192.0.x are public
+      // (WordPress.com hosts Entrepreneur India, PYMNTS and many news sites there) and must stay fetchable.
+      (a === 192 && b === 0 && (c === 0 || c === 2)) ||
+      (a === 198 && b === 51 && c === 100) || (a === 203 && b === 0 && c === 113) ||
       (a === 198 && (b === 18 || b === 19)) ||
       a >= 224
     );

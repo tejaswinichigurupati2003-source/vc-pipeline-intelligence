@@ -120,3 +120,29 @@ describe("rules-only degraded mode", () => {
     expect(validateRulesOnly(stale, { vc: vc(), candidate: stale, runStartedAt: NOW, knownEventKeys: new Set() }).outcome).toBe("rejected_stale");
   });
 });
+
+describe("event date stamped inside the evidence", () => {
+  const stamp = (label: string) => `Series A Amount Raised: INR 1,266,000,000Date: ${label}Lead Investors: Route Ventures`;
+  const go = (label: string, windowDays?: number) => {
+    const quote = stamp(label);
+    const text = `Route Ventures funding history. ${quote}. More text follows here.`;
+    return validateClassification(cls({ evidence_quote: quote, signal_type: "portfolio_investment" }), page(text), "t", "full_page",
+      { vc: vc(), candidate: cand(), runStartedAt: NOW, knownEventKeys: new Set(), windowDays });
+  };
+  it("a 2024 round on a page refreshed 3 days ago is not a fresh signal", () => {
+    const r = go("November 2024", 180);
+    expect(r.outcome).toBe("rejected_stale");
+    expect(r.reason).toMatch(/stamped in the evidence/);
+  });
+  it("an older stamp inside the history window is kept as history, dated to the real event", () => {
+    const r = go("July 2026", 180);
+    expect(r.outcome).toBe("accepted");
+    expect(r.signal?.event_at?.slice(0, 10)).toBe("2026-07-31");
+  });
+  it("a stamp from this month does not change a fresh signal", () => {
+    expect(go("October 2026", 180).outcome).toBe("accepted");
+  });
+  it("quotes without a Date stamp behave exactly as before", () => {
+    expect(run(cls(), page(TEXT)).outcome).toBe("accepted");
+  });
+});

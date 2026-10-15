@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { assertSafeUrl, extractFromHtml, isPrivateIp } from "@/lib/discovery/fetch-page";
 
 describe("SSRF guard", () => {
-  it.each(["127.0.0.1", "10.1.2.3", "172.16.0.1", "192.168.1.1", "169.254.169.254", "100.64.0.1", "0.0.0.0", "::1", "fd00::1", "fe80::1", "::ffff:127.0.0.1"])(
+  it.each(["127.0.0.1", "10.1.2.3", "172.16.0.1", "192.168.1.1", "169.254.169.254", "100.64.0.1", "0.0.0.0", "::1", "fd00::1", "fe80::1", "::ffff:127.0.0.1", "192.0.0.1", "192.0.2.10", "198.51.100.7", "203.0.113.9"])(
     "treats %s as private", (ip) => expect(isPrivateIp(ip)).toBe(true));
-  it.each(["8.8.8.8", "1.1.1.1", "2606:4700:4700::1111"])("allows public %s", (ip) => expect(isPrivateIp(ip)).toBe(false));
+  it.each(["8.8.8.8", "1.1.1.1", "2606:4700:4700::1111", "192.0.66.103", "192.0.66.138", "192.0.64.1", "192.0.127.254"])("allows public %s", (ip) => expect(isPrivateIp(ip)).toBe(false));
 
   it.each([
     "file:///etc/passwd", "ftp://example.com", "http://localhost/x", "http://127.0.0.1:3000", "http://169.254.169.254/latest/meta-data",

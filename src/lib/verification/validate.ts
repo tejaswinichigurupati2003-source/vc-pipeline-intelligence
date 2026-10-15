@@ -30,6 +30,22 @@ export function parseDate(s: string | null | undefined): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
+const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+
+/**
+ * Round-listing pages state the real event date inside the evidence ("... Date: November 2024"), while the page itself is
+ * refreshed often. When the quote carries such a stamp, that date is the event date: a 2024 round on a page updated this
+ * week is not a signal from the last 30 days. Returns the end of the stamped month, or null when the quote has no stamp.
+ */
+export function quotedEventDate(quote: string | null | undefined): Date | null {
+  const m = quote?.match(/(?<![A-Za-z])Date:\s*([A-Za-z]{3,9})\s+(\d{4})/);
+  if (!m) return null;
+  const mi = MONTHS.findIndex((x) => x === m[1].toLowerCase() || x.slice(0, 3) === m[1].toLowerCase());
+  const year = Number(m[2]);
+  if (mi < 0 || year < 1990 || year > 2100) return null;
+  return new Date(Date.UTC(year, mi + 1, 0));
+}
+
 export function cutoffFor(runStartedAt: Date, windowDays: number = config.lookbackDays): Date {
   return new Date(runStartedAt.getTime() - windowDays * DAY);
 }
@@ -94,7 +110,11 @@ export function validateClassification(
   if (!date) return { outcome: "needs_review", reason: cls.signal_type === "event_appearance" ? "no event date found" : "no usable date" };
 
   const cutoff = cutoffFor(ctx.runStartedAt, ctx.windowDays);
-  if (date < cutoff) return { outcome: "rejected_stale", reason: `dated ${date.toISOString().slice(0, 10)}, before ${cutoff.toISOString().slice(0, 10)}` };
+  // An older date stamped inside the quote wins over a refreshed page date.
+  const stamped = quotedEventDate(cls.evidence_quote);
+  const olderStamp = stamped && stamped < date ? stamped : null;
+  const effective = olderStamp ?? date;
+  if (effective < cutoff) return { outcome: "rejected_stale", reason: `dated ${effective.toISOString().slice(0, 10)}${olderStamp ? " (stamped in the evidence)" : ""}, before ${cutoff.toISOString().slice(0, 10)}` };
   if (date.getTime() > ctx.runStartedAt.getTime() + 2 * DAY && cls.signal_type !== "event_appearance") {
     return { outcome: "needs_review", reason: "date is in the future" };
   }
@@ -119,8 +139,8 @@ export function validateClassification(
       evidence_basis: basis,
       signal_type: cls.signal_type,
       published_at: published?.toISOString() ?? null,
-      event_at: event?.toISOString() ?? null,
-      date_basis: dateBasis,
+      event_at: (olderStamp ?? event)?.toISOString() ?? null,
+      date_basis: olderStamp ? "page_text" : dateBasis,
       evidence_summary: cls.evidence_summary,
       evidence_quote: cls.evidence_quote ?? null,
       relevance_score: cls.relevance_score,
