@@ -2,6 +2,7 @@ import Link from "next/link";
 import CountUp from "@/components/CountUp";
 import { LiveInsights, SignalTicker } from "@/components/LiveBits";
 import { buildLiveLines, buildTicker } from "@/lib/insights/live";
+import { summarizePipeline } from "@/lib/insights/scan-summary";
 import Icon, { type IconName } from "@/components/shell/Icon";
 import { ApiButton, Badge } from "@/components/ui";
 import { db } from "@/lib/db/client";
@@ -45,6 +46,7 @@ export default async function Today() {
     followUpAfterDays: Number(settings.follow_up_after_days) || 10,
   });
   const groups = groupByType(today.actions);
+  const sum = summarizePipeline(rows, run);
   const count = (b: string) => rows.filter((r) => r.bucket === b).length;
   const hour = new Date().getHours();
   const greeting = settings.founder_name ? `Good ${hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening"}, ${settings.founder_name.split(" ")[0]}` : "Today";
@@ -61,7 +63,7 @@ export default async function Today() {
           <LiveInsights lines={buildLiveLines(rows, newSuggestions ?? 0)} />
         </div>
         <div className="relative z-10 grid grid-cols-2 divide-x divide-white/20 border-t border-white/20 xl:grid-cols-4">
-          <Stat label="Ready to reach out" value={count("reach_out")} hint="Fresh, strong signal" href="/investors?filter=ready" />
+          <Stat label="Ready to reach out" value={count("reach_out")} hint="Not contacted, signal 30+" href="/investors?filter=ready" />
           <Stat label="Awaiting reply" value={rows.filter((r) => r.contact_status === "waiting_for_response").length} hint="You've reached out" href="/investors?stage=waiting_for_response" />
           <Stat label="In conversation" value={rows.filter((r) => r.contact_status === "in_conversation").length} hint="Active discussions" href="/investors?stage=in_conversation" />
           <Stat label="Needs a refresh" value={count("stale")} hint="Last scan failed" href="/investors?filter=stale" />
@@ -118,12 +120,26 @@ export default async function Today() {
             <h2 className="border-b border-slate-900 bg-slate-50 px-4 py-3">Latest scan</h2>
             <div className="p-4">
               {run ? (
+                <>
                 <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[0.85rem]">
                   <dt>Status</dt><dd className="text-right font-semibold capitalize text-slate-800">{run.status}</dd>
                   <dt>When</dt><dd className="text-right text-slate-700">{timeAgo(run.finished_at ?? run.started_at)}</dd>
-                  <dt>Investors</dt><dd className="text-right text-slate-700">{run.vcs_succeeded} of {run.vcs_targeted}</dd>
-                  <dt>Signals found</dt><dd className="text-right text-slate-700">{run.signals_accepted}</dd>
+                  <dt title="Investors whose search finished. The rest hit a failed or incomplete search and keep their previous values; they are never shown as quiet.">Refreshed</dt>
+                  <dd className="text-right text-slate-700">{run.vcs_succeeded} of {run.vcs_targeted}{sum.notRefreshed > 0 && <span className="block text-xs font-semibold text-amber-700">{sum.notRefreshed} search incomplete, old values kept</span>}</dd>
+                  <dt title="Verified signals this scan stored that were not already on file. Not the total.">New this scan</dt><dd className="text-right text-slate-700">{run.signals_accepted}</dd>
                 </dl>
+                <div className="mt-3 border-t border-slate-200 pt-3">
+                  <div className="eyebrow mb-2">Where your {sum.tracked} investors stand</div>
+                  <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1.5 text-[0.85rem]">
+                    <dt title="Investors with at least one verified source dated in the last 30 days. The score is built from these.">Verified news, last 30 days</dt><dd className="text-right text-slate-700">{sum.withNews} investors · {sum.sources} sources</dd>
+                    <dt title="Not contacted yet, with a verified signal scoring 30 or more.">Ready to reach out</dt><dd className="text-right font-semibold text-slate-900">{sum.ready}</dd>
+                    <dt title="A lighter verified signal (score 1 to 29): check fit before reaching out.">Worth a look</dt><dd className="text-right text-slate-700">{sum.worthLook}</dd>
+                    <dt title="You are already waiting on a reply, so no outreach is suggested whatever the news.">On hold, awaiting reply</dt><dd className="text-right text-slate-700">{sum.hold}</dd>
+                    <dt title="Search finished and found no verified signal. Not proof the investor is inactive.">Quiet</dt><dd className="text-right text-slate-700">{sum.quiet}</dd>
+                    {sum.needsRefresh > 0 && <><dt title="The last search failed, so the old values are kept. Not the same as quiet.">Needs a refresh</dt><dd className="text-right font-semibold text-amber-700">{sum.needsRefresh}</dd></>}
+                  </dl>
+                </div>
+                </>
               ) : <p className="text-sm text-slate-500">No scan yet. Press Refresh in the top bar.</p>}
             </div>
           </section>
