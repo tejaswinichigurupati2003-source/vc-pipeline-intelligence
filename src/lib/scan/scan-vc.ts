@@ -15,7 +15,7 @@ import { classifyCandidates, LlmUnavailable } from "@/lib/verification/classify"
 import type { PromptCandidate } from "@/lib/verification/prompt";
 import { validateClassification, validateRulesOnly, type ValidationResult } from "@/lib/verification/validate";
 import { scoreSignals } from "@/lib/scoring/score";
-import { buildSignalSummary, latestSignalDate, recommendAction } from "@/lib/scoring/recommend";
+import { buildSignalSummary, hasStrongSignal, latestSignalDate, recommendAction } from "@/lib/scoring/recommend";
 import type { AcceptedSignal, Candidate, EvidenceBasis, FetchedPage, VcProfile } from "@/lib/types";
 
 export interface RunContext {
@@ -209,7 +209,7 @@ export async function scanVc(vc: VcProfile, ctx: RunContext): Promise<VcScanResu
     last_signal_date: latestSignalDate(all),
     signal_summary: buildSignalSummary(all, score),
     follow_up_score: score.score,
-    recommended_action: recommendAction(score.band, vc.contact_status, vc.last_contact_at, now),
+    recommended_action: recommendAction(score.band, vc.contact_status, vc.last_contact_at, now, hasStrongSignal(score)),
   });
 
   await recordScoreHistory({ vcId: vc.id, runId: ctx.runId, score: score.score, counted: score.items.filter((i) => i.counted).length, signals: all, now, backfilled: backfill });

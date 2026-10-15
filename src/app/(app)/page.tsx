@@ -63,7 +63,7 @@ export default async function Today() {
           <LiveInsights lines={buildLiveLines(rows, newSuggestions ?? 0)} />
         </div>
         <div className="relative z-10 grid grid-cols-2 divide-x divide-white/20 border-t border-white/20 xl:grid-cols-4">
-          <Stat label="Ready to reach out" value={count("reach_out")} hint="Not contacted, signal 30+" href="/investors?filter=ready" />
+          <Stat label="Ready to reach out" value={count("reach_out")} hint="Not contacted, strong recent signal" href="/investors?filter=ready" />
           <Stat label="Awaiting reply" value={rows.filter((r) => r.contact_status === "waiting_for_response").length} hint="You've reached out" href="/investors?stage=waiting_for_response" />
           <Stat label="In conversation" value={rows.filter((r) => r.contact_status === "in_conversation").length} hint="Active discussions" href="/investors?stage=in_conversation" />
           <Stat label="Needs a refresh" value={count("stale")} hint="Last scan failed" href="/investors?filter=stale" />
@@ -132,8 +132,8 @@ export default async function Today() {
                   <div className="eyebrow mb-2">Where your {sum.tracked} investors stand</div>
                   <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1.5 text-[0.85rem]">
                     <dt title="Investors with at least one verified source dated in the last 30 days. The score is built from these.">Verified news, last 30 days</dt><dd className="text-right text-slate-700">{sum.withNews} investors · {sum.sources} sources</dd>
-                    <dt title="Not contacted yet, with a verified signal scoring 30 or more.">Ready to reach out</dt><dd className="text-right font-semibold text-slate-900">{sum.ready}</dd>
-                    <dt title="A lighter verified signal (score 1 to 29): check fit before reaching out.">Worth a look</dt><dd className="text-right text-slate-700">{sum.worthLook}</dd>
+                    <dt title="Not contacted yet, with a strong recent signal: a direct statement or action by the investor in the last 14 days, or a score of 30 or more.">Ready to reach out</dt><dd className="text-right font-semibold text-slate-900">{sum.ready}</dd>
+                    <dt title="Lighter verified evidence, such as portfolio news or an older signal. Check fit before reaching out.">Worth a look</dt><dd className="text-right text-slate-700">{sum.worthLook}</dd>
                     <dt title="You are already waiting on a reply, so no outreach is suggested whatever the news.">On hold, awaiting reply</dt><dd className="text-right text-slate-700">{sum.hold}</dd>
                     <dt title="Search finished and found no verified signal. Not proof the investor is inactive.">Quiet</dt><dd className="text-right text-slate-700">{sum.quiet}</dd>
                     {sum.needsRefresh > 0 && <><dt title="The last search failed, so the old values are kept. Not the same as quiet.">Needs a refresh</dt><dd className="text-right font-semibold text-amber-700">{sum.needsRefresh}</dd></>}

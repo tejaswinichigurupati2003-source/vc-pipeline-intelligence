@@ -1,7 +1,7 @@
 import { config } from "@/lib/config";
 import type { ContactStatus } from "@/lib/types";
 import { signalDate, type ScoreResult } from "./score";
-import type { StoredSignal } from "@/lib/types";
+import type { SignalType, StoredSignal } from "@/lib/types";
 
 export const ACTIONS = {
   REACH_OUT: "REACH OUT: cite the recent sector signal",
@@ -13,21 +13,34 @@ export const ACTIONS = {
   CLOSED: "CLOSED",
 } as const;
 
+/**
+ * One strong, recent, direct signal is enough to be worth contacting this week (the brief: "a VC who just published, invested or
+ * spoke last week is signal"), even though a single news article can never add up to the "high" score band by itself.
+ * Strong = a counted signal from the last 14 days, a direct statement or action by the investor (thesis, investment, commentary,
+ * appearance, not portfolio news or fund admin), relevance 0.7 or more, confidence medium or high. Deterministic; the score is unchanged.
+ */
+export const STRONG_TYPES: SignalType[] = ["investor_thesis", "portfolio_investment", "investor_commentary", "event_appearance"];
+export function hasStrongSignal(score: Pick<ScoreResult, "items">): boolean {
+  return score.items.some((i) => i.counted && i.ageDays <= 14 && STRONG_TYPES.includes(i.signal.signal_type) && i.signal.relevance_score >= 0.7 && i.signal.confidence !== "low");
+}
+
 /** Relationship-aware action (spec 10.3). Only called for a SUCCESSFUL scan; failed scans never write. */
 export function recommendAction(
   band: ScoreResult["band"],
   status: ContactStatus,
   lastContactAt: string | null,
   now: Date,
+  strongSignal = false,
 ): string {
   if (status === "closed") return ACTIONS.CLOSED;
   if (status === "waiting_for_response") return ACTIONS.HOLD;
   if (status === "in_conversation") return band === "low" ? ACTIONS.SKIP : ACTIONS.USE_IN_CONVERSATION;
   if (band === "low") return ACTIONS.SKIP;
+  const ready = band === "high" || strongSignal;
   const recentlyContacted =
     lastContactAt && (now.getTime() - new Date(lastContactAt).getTime()) / 86_400_000 <= config.cooldownDays;
-  if (band === "high" && recentlyContacted) return ACTIONS.REVIEW_TIMING;
-  return band === "high" ? ACTIONS.REACH_OUT : ACTIONS.REVIEW;
+  if (ready && recentlyContacted) return ACTIONS.REVIEW_TIMING;
+  return ready ? ACTIONS.REACH_OUT : ACTIONS.REVIEW;
 }
 
 const fmt = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });

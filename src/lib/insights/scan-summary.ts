@@ -6,8 +6,8 @@ import type { PipelineRow } from "@/lib/db/read";
  *   refreshed       investors whose search finished (run.vcs_succeeded); the rest hit a failed or incomplete search and keep old values
  *   newSignals      verified signals stored by that scan that were not already known (run.signals_accepted), NOT the total on file
  *   withNews        investors with at least one verified source dated in the last 30 days (what the score is built from)
- *   ready           of those, not yet contacted and scoring 30 or more (action: reach out)
- *   worthLook       a lighter verified signal (score 1 to 29, action: review)
+ *   ready           of those, not yet contacted and with one strong recent signal, or a score of 30+ (action: reach out)
+ *   worthLook       lighter verified evidence, so check fit first (action: review)
  *   hold            you are already waiting on a reply, so no outreach is suggested whatever the signal
  */
 export interface PipelineSummary {
